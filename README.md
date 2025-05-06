@@ -1219,6 +1219,56 @@ Valid modes are:
 
 </details>
 
+## LightRAG init parameters
+
+<details>
+<summary> Parameters </summary>
+
+| **Parameter** | **Type** | **Explanation** | **Default** |
+|--------------|----------|-----------------|-------------|
+| **working_dir** | `str` | Directory where the cache will be stored | `lightrag_cache+timestamp` |
+| **kv_storage** | `str` | Storage type for documents and text chunks. Supported types: `JsonKVStorage`,`PGKVStorage`,`RedisKVStorage`,`MongoKVStorage` | `JsonKVStorage` |
+| **vector_storage** | `str` | Storage type for embedding vectors. Supported types: `NanoVectorDBStorage`,`PGVectorStorage`,`MilvusVectorDBStorage`,`ChromaVectorDBStorage`,`FaissVectorDBStorage`,`MongoVectorDBStorage`,`QdrantVectorDBStorage` | `NanoVectorDBStorage` |
+| **graph_storage** | `str` | Storage type for graph edges and nodes. Supported types: `NetworkXStorage`,`Neo4JStorage`,`PGGraphStorage`,`AGEStorage` | `NetworkXStorage` |
+| **doc_status_storage** | `str` | Storage type for documents process status. Supported types: `JsonDocStatusStorage`,`PGDocStatusStorage`,`MongoDocStatusStorage` | `JsonDocStatusStorage` |
+| **chunk_token_size** | `int` | Maximum token size per chunk when splitting documents | `1200` |
+| **chunk_overlap_token_size** | `int` | Overlap token size between two chunks when splitting documents | `100` |
+| **tokenizer** | `Tokenizer` | The function used to convert text into tokens (numbers) and back using .encode() and .decode() functions following `TokenizerInterface` protocol. If you don't specify one, it will use the default Tiktoken tokenizer. | `TiktokenTokenizer` |
+| **tiktoken_model_name** | `str` | If you're using the default Tiktoken tokenizer, this is the name of the specific Tiktoken model to use. This setting is ignored if you provide your own tokenizer. | `gpt-4o-mini` |
+| **entity_extract_max_gleaning** | `int` | Number of loops in the entity extraction process, appending history messages | `1` |
+| **entity_summary_to_max_tokens** | `int` | Maximum token size for each entity summary | `500` |
+| **node_embedding_algorithm** | `str` | Algorithm for node embedding (currently not used) | `node2vec` |
+| **node2vec_params** | `dict` | Parameters for node embedding | `{"dimensions": 1536,"num_walks": 10,"walk_length": 40,"window_size": 2,"iterations": 3,"random_seed": 3,}` |
+| **embedding_func** | `EmbeddingFunc` | Function to generate embedding vectors from text | `openai_embed` |
+| **embedding_batch_num** | `int` | Maximum batch size for embedding processes (multiple texts sent per batch) | `32` |
+| **embedding_func_max_async** | `int` | Maximum number of concurrent asynchronous embedding processes | `16` |
+| **llm_model_func** | `callable` | Function for LLM generation | `gpt_4o_mini_complete` |
+| **llm_model_name** | `str` | LLM model name for generation | `meta-llama/Llama-3.2-1B-Instruct` |
+| **llm_model_max_token_size** | `int` | Maximum token size for LLM generation (affects entity relation summaries) | `32768`（default value changed by env var MAX_TOKENS) |
+| **llm_model_max_async** | `int` | Maximum number of concurrent asynchronous LLM processes | `4`（default value changed by env var MAX_ASYNC) |
+| **llm_model_kwargs** | `dict` | Additional parameters for LLM generation | |
+| **vector_db_storage_cls_kwargs** | `dict` | Additional parameters for vector database, like setting the threshold for nodes and relations retrieval | cosine_better_than_threshold: 0.2（default value changed by env var COSINE_THRESHOLD) |
+| **enable_llm_cache** | `bool` | If `TRUE`, stores LLM results in cache; repeated prompts return cached responses | `TRUE` |
+| **enable_llm_cache_for_entity_extract** | `bool` | If `TRUE`, stores LLM results in cache for entity extraction; Good for beginners to debug your application | `TRUE` |
+| **addon_params** | `dict` | Additional parameters, e.g., `{"example_number": 1, "language": "Simplified Chinese", "entity_types": ["organization", "person", "geo", "event"], "insert_batch_size": 10}`: sets example limit, output language, and batch size for document processing and allows for custom prompts similar to `prompt.py` with the same dict keys. | `example_number: all examples, language: English, insert_batch_size: 10` |
+| **convert_response_to_json_func** | `callable` | Not used | `convert_response_to_json` |
+| **embedding_cache_config** | `dict` | Configuration for question-answer caching. Contains three parameters: `enabled`: Boolean value to enable/disable cache lookup functionality. When enabled, the system will check cached responses before generating new answers. `similarity_threshold`: Float value (0-1), similarity threshold. When a new question's similarity with a cached question exceeds this threshold, the cached answer will be returned directly without calling the LLM. `use_llm_check`: Boolean value to enable/disable LLM similarity verification. When enabled, LLM will be used as a secondary check to verify the similarity between questions before returning cached answers. | Default: `{"enabled": False, "similarity_threshold": 0.95, "use_llm_check": False}` |
+
+</details>
+
+## Error Handling
+
+<details>
+<summary>Click to view error handling details</summary>
+
+The API includes comprehensive error handling:
+
+- File not found errors (404)
+- Processing errors (500)
+- Supports multiple file encodings (UTF-8 and GBK)
+
+</details>
+
 ## LightRAG API
 
 The LightRAG Server is designed to provide Web UI and API support.  **For more information about LightRAG Server, please refer to [LightRAG Server](./lightrag/api/README.md).**
