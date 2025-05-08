@@ -325,7 +325,7 @@ def create_app(args):
             enable_llm_cache=args.enable_llm_cache,
             auto_manage_storages_states=False,
             max_parallel_insert=args.max_parallel_insert,
-            addon_params={"language": args.summary_language},
+            addon_params=args.addon_params,
         )
     else:  # azure_openai
         rag = LightRAG(
@@ -351,7 +351,7 @@ def create_app(args):
             enable_llm_cache=args.enable_llm_cache,
             auto_manage_storages_states=False,
             max_parallel_insert=args.max_parallel_insert,
-            addon_params={"language": args.summary_language},
+            addon_params=args.addon_params,
         )
 
     # Add routes
