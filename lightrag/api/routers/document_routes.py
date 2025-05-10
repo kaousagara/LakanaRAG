@@ -969,6 +969,69 @@ def create_document_routes(
             logger.error(traceback.format_exc())
             raise HTTPException(status_code=500, detail=str(e))
 
+    @router.delete("/{doc_id}", dependencies=[Depends(combined_auth)])
+    async def delete_document(doc_id: str):
+        """
+        Delete a specific document by its ID.
+
+        Args:
+            doc_id (str): The ID of the document to delete.
+
+        Returns:
+            dict: A confirmation message.
+
+        Raises:
+            HTTPException: If the document is not found (404) or an error occurs (500).
+        """
+        try:
+            # First delete corresponding file from input directory if exists
+            doc_info = await rag.aget_doc_info(doc_id)
+            if doc_info and isinstance(doc_info, dict) and doc_info.get("file_path"):
+                try:
+                    file_path = Path(doc_manager.input_dir) / doc_info.get("file_path")
+                    if file_path.exists() and file_path.is_file():
+                        try:
+                            file_path.unlink()
+                            logger.info(
+                                f"Deleted file {file_path} for document ID: {doc_id}"
+                            )
+                        except PermissionError as pe:
+                            logger.error(
+                                f"Permission denied when deleting file {file_path}: {str(pe)}"
+                            )
+                        except Exception as e:
+                            logger.error(f"Error deleting file {file_path}: {str(e)}")
+                            logger.error(traceback.format_exc())
+                except Exception as e:
+                    logger.error(
+                        f"Error processing file path {doc_info.get('file_path')}: {str(e)}"
+                    )
+                    logger.error(traceback.format_exc())
+
+            # Then delete from RAG system
+            await rag.adelete_by_doc_id(doc_id)
+
+            logger.info(f"Successfully deleted document with ID: {doc_id}")
+            return {
+                "status": "success",
+                "message": f"Document with ID '{doc_id}' deleted successfully.",
+            }
+        except ValueError:  # Assuming ValueError indicates the document was not found
+            logger.warning(f"Document with ID '{doc_id}' not found for deletion.")
+            raise HTTPException(
+                status_code=404, detail=f"Document with ID '{doc_id}' not found."
+            )
+        except HTTPException as http_exc:
+            # Re-raise HTTP exceptions directly
+            raise http_exc
+        except Exception as e:
+            logger.error(f"Unexpected error deleting document {doc_id}: {str(e)}")
+            logger.error(traceback.format_exc())  # Log traceback for unexpected errors
+            raise HTTPException(
+                status_code=500,
+                detail=f"Internal server error during deletion: {str(e)}",
+            )
+
     @router.delete(
         "", response_model=ClearDocumentsResponse, dependencies=[Depends(combined_auth)]
     )
