@@ -349,6 +349,7 @@ const createSigmaGraph = (rawGraph: RawGraph | null) => {
     graph.addNode(rawNode.id, {
       label: rawNode.labels.join(', '),
       color: rawNode.color,
+      entityType: rawNode.properties?.entity_type,
       x: x,
       y: y,
       size: rawNode.size,
@@ -411,6 +412,7 @@ const useLightrangeGraph = () => {
   const isFetching = useGraphStore.use.isFetching()
   const nodeToExpand = useGraphStore.use.nodeToExpand()
   const nodeToPrune = useGraphStore.use.nodeToPrune()
+  const edgeToPrune = useGraphStore.use.edgeToPrune()
 
 
   // Use ref to track if data has been loaded and initial load
@@ -1083,6 +1085,49 @@ const useLightrangeGraph = () => {
       }, 0);
     }
   }, [nodeToPrune, sigmaGraph, rawGraph, getNodesThatWillBeDeleted, t]);
+
+  // Handle edge pruning
+  useEffect(() => {
+    const handleEdgePrune = (edgeId: string | null) => {
+      if (!edgeId || !sigmaGraph || !rawGraph) return
+
+      try {
+        const state = useGraphStore.getState()
+
+        if (!sigmaGraph.hasEdge(edgeId)) {
+          console.error('Edge not found:', edgeId)
+          return
+        }
+
+        state.clearSelection()
+
+        const { source, target } = sigmaGraph.extremities(edgeId)
+        sigmaGraph.dropEdge(edgeId)
+
+        const edgeIndex = rawGraph.edgeDynamicIdMap[edgeId]
+        if (edgeIndex !== undefined) {
+          const removed = rawGraph.edges.splice(edgeIndex, 1)[0]
+          for (const [id, idx] of Object.entries(rawGraph.edgeIdMap)) {
+            if (idx > edgeIndex) rawGraph.edgeIdMap[id] = idx - 1
+          }
+          delete rawGraph.edgeIdMap[removed.id]
+          delete rawGraph.edgeDynamicIdMap[edgeId]
+        }
+
+        rawGraph.buildDynamicMap()
+        useGraphStore.getState().resetSearchEngine()
+      } catch (e) {
+        console.error('Error pruning edge:', e)
+      }
+    }
+
+    if (edgeToPrune) {
+      handleEdgePrune(edgeToPrune)
+      window.setTimeout(() => {
+        useGraphStore.getState().triggerEdgePrune(null)
+      }, 0)
+    }
+  }, [edgeToPrune, sigmaGraph, rawGraph])
 
   const lightrageGraph = useCallback(() => {
     // If we already have a graph instance, return it

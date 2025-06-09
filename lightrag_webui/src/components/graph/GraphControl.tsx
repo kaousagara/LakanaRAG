@@ -43,6 +43,7 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
   const selectedEdge = useGraphStore.use.selectedEdge()
   const focusedEdge = useGraphStore.use.focusedEdge()
   const sigmaGraph = useGraphStore.use.sigmaGraph()
+  const nodeTypeFilter = useGraphStore.use.nodeTypeFilter()
 
   /**
    * When component mount or maxIterations changes
@@ -113,11 +114,20 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
       clickNode: (event: NodeEvent) => {
         const graph = sigma.getGraph()
         if (graph.hasNode(event.node)) {
-          setSelectedNode(event.node)
-          setSelectedEdge(null)
+          const shift = (event.event.original as MouseEvent).shiftKey
+          if (shift) {
+            useGraphStore.getState().addMultiSelectedNode(event.node)
+          } else {
+            setSelectedNode(event.node)
+            setSelectedEdge(null)
+            useGraphStore.getState().clearMultiSelectedNodes()
+          }
         }
       },
-      clickStage: () => clearSelection()
+      clickStage: () => {
+        clearSelection()
+        useGraphStore.getState().clearMultiSelectedNodes()
+      }
     }
 
     // Only add edge event handlers if enableEdgeEvents is true
@@ -211,7 +221,13 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
         const newData: NodeType & {
           labelColor?: string
           borderColor?: string
-        } = { ...data, highlighted: data.highlighted || false, labelColor }
+          hidden?: boolean
+        } = { ...data, highlighted: data.highlighted || false, labelColor, hidden: false }
+
+        if (nodeTypeFilter && graph.getNodeAttribute(node, 'entityType') !== nodeTypeFilter) {
+          newData.hidden = true
+          return newData
+        }
 
         if (!disableHoverEffect) {
           newData.highlighted = false
@@ -253,6 +269,17 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
       edgeReducer: (edge, data) => {
         const graph = sigma.getGraph()
         const newData = { ...data, hidden: false, labelColor, color: edgeColor }
+
+        if (nodeTypeFilter) {
+          const [s, t] = graph.extremities(edge)
+          if (
+            graph.getNodeAttribute(s, 'entityType') !== nodeTypeFilter ||
+            graph.getNodeAttribute(t, 'entityType') !== nodeTypeFilter
+          ) {
+            newData.hidden = true
+            return newData
+          }
+        }
 
         if (!disableHoverEffect) {
           const _focusedNode = focusedNode || selectedNode
@@ -302,6 +329,7 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
     enableEdgeEvents,
     renderEdgeLabels,
     renderLabels
+    ,nodeTypeFilter
   ])
 
   return null

@@ -20,6 +20,7 @@ import PropertiesView from '@/components/graph/PropertiesView'
 import SettingsDisplay from '@/components/graph/SettingsDisplay'
 import Legend from '@/components/graph/Legend'
 import LegendButton from '@/components/graph/LegendButton'
+import MultiSelectActions from '@/components/graph/actions/MultiSelectActions'
 
 import { useSettingsStore } from '@/stores/settings'
 import { useGraphStore } from '@/stores/graph'
@@ -214,6 +215,8 @@ const GraphViewer = () => {
             <Legend className="bg-background/60 backdrop-blur-lg" />
           </div>
         )}
+
+        <MultiSelectActions />
 
         {/* <div className="absolute bottom-2 right-2 flex flex-col rounded-xl border-2">
           <MiniMap width="100px" height="100px" />

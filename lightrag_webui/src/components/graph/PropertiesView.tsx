@@ -295,7 +295,7 @@ const NodePropertiesView = ({ node }: { node: NodeType }) => {
           .sort()
           .map((name) => {
             if (name === 'created_at') return null; // Hide created_at property
-            return (
+            const row = (
               <PropertyRow
                 key={name}
                 name={name}
@@ -303,9 +303,22 @@ const NodePropertiesView = ({ node }: { node: NodeType }) => {
                 nodeId={String(node.id)}
                 entityId={node.properties['entity_id']}
                 entityType="node"
-                isEditable={name === 'description' || name === 'entity_id'}
+                isEditable={name === 'description' || name === 'entity_id' || name === 'entity_type'}
               />
             )
+
+            if (name === 'source_id') {
+              return (
+                <div key={name} className="flex flex-col gap-1">
+                  {row}
+                  <button className="text-red-500 text-xs underline" onClick={() => useGraphStore.getState().triggerNodePrune(node.id)}>
+                    {t('graphPanel.propertiesView.node.deleteNode')}
+                  </button>
+                </div>
+              )
+            }
+
+            return row
           })}
       </div>
       {node.relationships.length > 0 && (
@@ -362,7 +375,7 @@ const EdgePropertiesView = ({ edge }: { edge: EdgeType }) => {
           .sort()
           .map((name) => {
             if (name === 'created_at') return null; // Hide created_at property
-            return (
+            const row = (
               <PropertyRow
                 key={name}
                 name={name}
@@ -375,6 +388,19 @@ const EdgePropertiesView = ({ edge }: { edge: EdgeType }) => {
                 isEditable={name === 'description' || name === 'keywords'}
               />
             )
+
+            if (name === 'weight') {
+              return (
+                <div key={name} className="flex flex-col gap-1">
+                  {row}
+                  <button className="text-red-500 text-xs underline" onClick={() => useGraphStore.getState().triggerEdgePrune(edge.dynamicId)}>
+                    {t('graphPanel.propertiesView.edge.deleteRelation')}
+                  </button>
+                </div>
+              )
+            }
+
+            return row
           })}
       </div>
     </div>

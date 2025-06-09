@@ -273,14 +273,20 @@
           "weight": "Poids"
         }
       },
+      "deleteNode": "Supprimer le nœud",
       "edge": {
         "title": "Relation",
         "id": "ID",
         "type": "Type",
         "source": "Source",
         "target": "Cible",
-        "properties": "Propriétés"
+        "properties": "Propriétés",
+        "deleteRelation": "Supprimer la relation"
       }
+    },
+    "multiSelect": {
+      "merge": "Fusionner",
+      "createRelation": "Créer une relation"
     },
     "search": {
       "placeholder": "Rechercher des nœuds...",

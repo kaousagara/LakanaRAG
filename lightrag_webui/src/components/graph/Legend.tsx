@@ -11,6 +11,8 @@ interface LegendProps {
 const Legend: React.FC<LegendProps> = ({ className }) => {
   const { t } = useTranslation()
   const typeColorMap = useGraphStore.use.typeColorMap()
+  const nodeTypeFilter = useGraphStore.use.nodeTypeFilter()
+  const setNodeTypeFilter = useGraphStore.use.setNodeTypeFilter()
 
   if (!typeColorMap || typeColorMap.size === 0) {
     return null
@@ -22,7 +24,11 @@ const Legend: React.FC<LegendProps> = ({ className }) => {
       <ScrollArea className="max-h-80">
         <div className="flex flex-col gap-1">
           {Array.from(typeColorMap.entries()).map(([type, color]) => (
-            <div key={type} className="flex items-center gap-2">
+            <div
+              key={type}
+              className={`flex items-center gap-2 cursor-pointer ${nodeTypeFilter === type ? 'font-bold' : ''}`}
+              onClick={() => setNodeTypeFilter(nodeTypeFilter === type ? null : type)}
+            >
               <div
                 className="w-4 h-4 rounded-full"
                 style={{ backgroundColor: color }}

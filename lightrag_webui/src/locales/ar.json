@@ -273,14 +273,20 @@
           "weight": "الوزن"
         }
       },
+      "deleteNode": "حذف العقدة",
       "edge": {
         "title": "علاقة",
         "id": "المعرف",
         "type": "النوع",
         "source": "المصدر",
         "target": "الهدف",
-        "properties": "الخصائص"
+        "properties": "الخصائص",
+        "deleteRelation": "حذف العلاقة"
       }
+    },
+    "multiSelect": {
+      "merge": "دمج العقد",
+      "createRelation": "إنشاء علاقة"
     },
     "search": {
       "placeholder": "ابحث في العقد...",

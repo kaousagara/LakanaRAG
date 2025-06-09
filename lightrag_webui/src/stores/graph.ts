@@ -132,6 +132,7 @@ interface GraphState {
   // Node operation state
   nodeToExpand: string | null
   nodeToPrune: string | null
+  edgeToPrune: string | null
 
   // Version counter to trigger data refresh
   graphDataVersion: number
@@ -140,6 +141,18 @@ interface GraphState {
   // Methods for updating graph elements and UI state together
   updateNodeAndSelect: (nodeId: string, entityId: string, propertyName: string, newValue: string) => Promise<void>
   updateEdgeAndSelect: (edgeId: string, dynamicId: string, sourceId: string, targetId: string, propertyName: string, newValue: string) => Promise<void>
+  // Multi select nodes
+  multiSelectedNodes: string[]
+  addMultiSelectedNode: (nodeId: string) => void
+  clearMultiSelectedNodes: () => void
+
+  // Filter by node type
+  nodeTypeFilter: string | null
+  setNodeTypeFilter: (type: string | null) => void
+
+  // Edge prune
+  edgeToPrune: string | null
+  triggerEdgePrune: (edgeId: string | null) => void
 }
 
 const useGraphStoreBase = create<GraphState>()((set, get) => ({
@@ -166,6 +179,10 @@ const useGraphStoreBase = create<GraphState>()((set, get) => ({
 
   searchEngine: null,
 
+  multiSelectedNodes: [],
+  nodeTypeFilter: null,
+  edgeToPrune: null,
+
   setGraphIsEmpty: (isEmpty: boolean) => set({ graphIsEmpty: isEmpty }),
   setLastSuccessfulQueryLabel: (label: string) => set({ lastSuccessfulQueryLabel: label }),
 
@@ -181,7 +198,8 @@ const useGraphStoreBase = create<GraphState>()((set, get) => ({
       selectedNode: null,
       focusedNode: null,
       selectedEdge: null,
-      focusedEdge: null
+      focusedEdge: null,
+      multiSelectedNodes: []
     }),
   reset: () => {
     set({
@@ -193,7 +211,10 @@ const useGraphStoreBase = create<GraphState>()((set, get) => ({
       sigmaGraph: null,  // to avoid other components from acccessing graph objects
       searchEngine: null,
       moveToSelectedNode: false,
-      graphIsEmpty: false
+      graphIsEmpty: false,
+      multiSelectedNodes: [],
+      nodeTypeFilter: null,
+      edgeToPrune: null
     });
   },
 
@@ -231,6 +252,14 @@ const useGraphStoreBase = create<GraphState>()((set, get) => ({
   setSearchEngine: (engine: MiniSearch | null) => set({ searchEngine: engine }),
   resetSearchEngine: () => set({ searchEngine: null }),
 
+  addMultiSelectedNode: (nodeId: string) =>
+    set(state => ({ multiSelectedNodes: [...state.multiSelectedNodes, nodeId] })),
+  clearMultiSelectedNodes: () => set({ multiSelectedNodes: [] }),
+
+  setNodeTypeFilter: (type: string | null) => set({ nodeTypeFilter: type }),
+
+  triggerEdgePrune: (edgeId: string | null) => set({ edgeToPrune: edgeId }),
+
   // Methods to set global flags
   setGraphDataFetchAttempted: (attempted: boolean) => set({ graphDataFetchAttempted: attempted }),
   setLabelsFetchAttempted: (attempted: boolean) => set({ labelsFetchAttempted: attempted }),
@@ -238,10 +267,12 @@ const useGraphStoreBase = create<GraphState>()((set, get) => ({
   // Node operation state
   nodeToExpand: null,
   nodeToPrune: null,
+  edgeToPrune: null,
 
   // Event trigger methods for node operations
   triggerNodeExpand: (nodeId: string | null) => set({ nodeToExpand: nodeId }),
   triggerNodePrune: (nodeId: string | null) => set({ nodeToPrune: nodeId }),
+  triggerEdgePrune: (edgeId: string | null) => set({ edgeToPrune: edgeId }),
 
   // Version counter implementation
   graphDataVersion: 0,

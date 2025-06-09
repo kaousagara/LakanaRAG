@@ -55,6 +55,7 @@ export const GraphSearchInput = ({
   const { t } = useTranslation()
   const graph = useGraphStore.use.sigmaGraph()
   const searchEngine = useGraphStore.use.searchEngine()
+  const nodeTypeFilter = useGraphStore.use.nodeTypeFilter()
 
   // Reset search engine when graph changes
   useEffect(() => {
@@ -115,6 +116,7 @@ export const GraphSearchInput = ({
       if (!query) {
         const nodeIds = graph.nodes()
           .filter(id => graph.hasNode(id))
+          .filter(id => !nodeTypeFilter || graph.getNodeAttribute(id, 'entityType') === nodeTypeFilter)
           .slice(0, searchResultLimit)
         return nodeIds.map(id => ({
           id,
@@ -125,6 +127,7 @@ export const GraphSearchInput = ({
       // If has query, search nodes and verify they still exist
       let result: OptionItem[] = searchEngine.search(query)
         .filter((r: { id: string }) => graph.hasNode(r.id))
+        .filter((r: { id: string }) => !nodeTypeFilter || graph.getNodeAttribute(r.id, 'entityType') === nodeTypeFilter)
         .map((r: { id: string }) => ({
           id: r.id,
           type: 'nodes'
@@ -145,10 +148,11 @@ export const GraphSearchInput = ({
             // Get node label
             const label = graph.getNodeAttribute(id, 'label')
             // Match if label contains query string but doesn't start with it
-            return label &&
-                   typeof label === 'string' &&
-                   !label.toLowerCase().startsWith(query.toLowerCase()) &&
-                   label.toLowerCase().includes(query.toLowerCase())
+            if (!(label && typeof label === 'string' &&
+                  !label.toLowerCase().startsWith(query.toLowerCase()) &&
+                  label.toLowerCase().includes(query.toLowerCase()))) return false
+
+            return !nodeTypeFilter || graph.getNodeAttribute(id, 'entityType') === nodeTypeFilter
           })
           .map(id => ({
             id,

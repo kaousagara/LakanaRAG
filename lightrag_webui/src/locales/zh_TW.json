@@ -273,14 +273,20 @@
           "weight": "權重"
           }
       },
+      "deleteNode": "刪除節點",
       "edge": {
         "title": "關係",
         "id": "ID",
         "type": "類型",
         "source": "來源節點",
         "target": "目標節點",
-        "properties": "屬性"
+        "properties": "屬性",
+        "deleteRelation": "刪除關係"
       }
+    },
+    "multiSelect": {
+      "merge": "合併節點",
+      "createRelation": "創建關係"
     },
     "search": {
       "placeholder": "搜尋節點...",

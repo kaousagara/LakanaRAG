@@ -273,14 +273,20 @@
           "weight": "Weight"
         }
       },
+      "deleteNode": "Delete Node",
       "edge": {
         "title": "Relationship",
         "id": "ID",
         "type": "Type",
         "source": "Source",
         "target": "Target",
-        "properties": "Properties"
+        "properties": "Properties",
+      "deleteRelation": "Delete Relation"
       }
+    },
+    "multiSelect": {
+      "merge": "Merge Nodes",
+      "createRelation": "Create Relation"
     },
     "search": {
       "placeholder": "Search nodes...",
