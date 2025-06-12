@@ -7,6 +7,7 @@ import re
 import os
 from typing import Any, AsyncIterator
 from collections import Counter, defaultdict
+from itertools import combinations
 
 from .utils import (
     logger,
@@ -15,6 +16,7 @@ from .utils import (
     Tokenizer,
     is_float_regex,
     normalize_extracted_info,
+    standardize_entity_name,
     pack_user_ass_to_openai_messages,
     split_string_by_multi_markers,
     truncate_list_by_token_size,
@@ -154,7 +156,7 @@ async def _handle_single_entity_extraction(
     chunk_key: str,
     file_path: str = "unknown_source",
 ):
-    if len(record_attributes) < 4 or '"entity"' not in record_attributes[0]:
+    if len(record_attributes) < 5 or '"entity"' not in record_attributes[0]:
         return None
 
     # Clean and validate entity name
@@ -167,6 +169,7 @@ async def _handle_single_entity_extraction(
 
     # Normalize entity name
     entity_name = normalize_extracted_info(entity_name, is_entity=True)
+    entity_name = standardize_entity_name(entity_name)
 
     # Clean and validate entity type
     entity_type = clean_str(record_attributes[2]).strip('"')
@@ -180,6 +183,10 @@ async def _handle_single_entity_extraction(
     entity_description = clean_str(record_attributes[3])
     entity_description = normalize_extracted_info(entity_description)
 
+    additional_properties = normalize_extracted_info(
+        clean_str(record_attributes[4])
+    )
+
     if not entity_description.strip():
         logger.warning(
             f"Entity extraction error: empty description for entity '{entity_name}' of type '{entity_type}'"
@@ -190,6 +197,7 @@ async def _handle_single_entity_extraction(
         entity_name=entity_name,
         entity_type=entity_type,
         description=entity_description,
+        additional_properties=additional_properties,
         source_id=chunk_key,
         file_path=file_path,
     )
@@ -207,8 +215,8 @@ async def _handle_single_relationship_extraction(
     target = clean_str(record_attributes[2])
 
     # Normalize source and target entity names
-    source = normalize_extracted_info(source, is_entity=True)
-    target = normalize_extracted_info(target, is_entity=True)
+    source = standardize_entity_name(normalize_extracted_info(source, is_entity=True))
+    target = standardize_entity_name(normalize_extracted_info(target, is_entity=True))
     if source == target:
         logger.debug(
             f"Relationship source and target are the same in: {record_attributes}"
@@ -240,6 +248,38 @@ async def _handle_single_relationship_extraction(
     )
 
 
+async def _handle_single_association_extraction(
+    record_attributes: list[str],
+    chunk_key: str,
+    file_path: str = "unknown_source",
+):
+    if len(record_attributes) < 7 or '"Association"' not in record_attributes[0]:
+        return None
+
+    entities = [
+        standardize_entity_name(normalize_extracted_info(e, is_entity=True))
+        for e in record_attributes[1:-4]
+    ]
+    description = normalize_extracted_info(clean_str(record_attributes[-4]))
+    generalization = normalize_extracted_info(clean_str(record_attributes[-3]))
+    keywords = normalize_extracted_info(clean_str(record_attributes[-2]))
+    strength = (
+        float(record_attributes[-1].strip('"').strip("'"))
+        if is_float_regex(record_attributes[-1].strip('"').strip("'"))
+        else 1.0
+    )
+
+    return dict(
+        entities=entities,
+        description=description,
+        generalization=generalization,
+        keywords=keywords,
+        strength=strength,
+        source_id=chunk_key,
+        file_path=file_path,
+    )
+
+
 async def _merge_nodes_then_upsert(
     entity_name: str,
     nodes_data: list[dict],
@@ -250,6 +290,7 @@ async def _merge_nodes_then_upsert(
     llm_response_cache: BaseKVStorage | None = None,
 ):
     """Get existing nodes from knowledge graph use name,if exists, merge data, else create, then upsert."""
+    entity_name = standardize_entity_name(entity_name)
     already_entity_types = []
     already_source_ids = []
     already_description = []
@@ -340,6 +381,8 @@ async def _merge_edges_then_upsert(
 ):
     if src_id == tgt_id:
         return None
+    src_id = standardize_entity_name(src_id)
+    tgt_id = standardize_entity_name(tgt_id)
 
     already_weights = []
     already_source_ids = []
@@ -502,6 +545,72 @@ async def _merge_edges_then_upsert(
     return edge_data
 
 
+async def _merge_association_then_upsert(
+    assoc: dict,
+    knowledge_graph_inst: BaseGraphStorage,
+    global_config: dict,
+    pipeline_status: dict | None = None,
+    pipeline_status_lock=None,
+    llm_response_cache: BaseKVStorage | None = None,
+):
+    entities = [standardize_entity_name(e) for e in assoc["entities"]]
+    assoc_id = compute_mdhash_id("::".join(sorted(entities)), prefix="assoc-")
+    description = assoc["description"] + GRAPH_FIELD_SEP + assoc["generalization"]
+
+    node_data = dict(
+        entity_id=assoc_id,
+        entity_type="ASSOCIATION",
+        description=description,
+        keywords=assoc["keywords"],
+        strength=assoc["strength"],
+        entities=";".join(entities),
+        source_id=assoc["source_id"],
+        file_path=assoc.get("file_path", "unknown_source"),
+        created_at=int(time.time()),
+    )
+    await knowledge_graph_inst.upsert_node(assoc_id, node_data)
+
+    # Link association node to its entities
+    for ent in entities:
+        await knowledge_graph_inst.upsert_edge(
+            assoc_id,
+            ent,
+            edge_data=dict(
+                weight=assoc["strength"],
+                description=assoc["generalization"],
+                keywords=assoc["keywords"],
+                source_id=assoc["source_id"],
+                file_path=assoc.get("file_path", "unknown_source"),
+                created_at=int(time.time()),
+            ),
+        )
+
+    # Also create pairwise edges between entities
+    for src, tgt in combinations(entities, 2):
+        await _merge_edges_then_upsert(
+            src,
+            tgt,
+            [
+                dict(
+                    weight=assoc["strength"],
+                    description=assoc["description"],
+                    keywords=assoc["keywords"],
+                    source_id=assoc["source_id"],
+                    file_path=assoc.get("file_path", "unknown_source"),
+                    created_at=int(time.time()),
+                )
+            ],
+            knowledge_graph_inst,
+            global_config,
+            pipeline_status,
+            pipeline_status_lock,
+            llm_response_cache,
+        )
+
+    node_data["entity_name"] = assoc_id
+    return node_data
+
+
 async def merge_nodes_and_edges(
     chunk_results: list,
     knowledge_graph_inst: BaseGraphStorage,
@@ -533,8 +642,9 @@ async def merge_nodes_and_edges(
     # Collect all nodes and edges from all chunks
     all_nodes = defaultdict(list)
     all_edges = defaultdict(list)
+    all_assocs = []
 
-    for maybe_nodes, maybe_edges in chunk_results:
+    for maybe_nodes, maybe_edges, maybe_assocs in chunk_results:
         # Collect nodes
         for entity_name, entities in maybe_nodes.items():
             all_nodes[entity_name].extend(entities)
@@ -543,10 +653,13 @@ async def merge_nodes_and_edges(
         for edge_key, edges in maybe_edges.items():
             sorted_edge_key = tuple(sorted(edge_key))
             all_edges[sorted_edge_key].extend(edges)
+        for assoc in maybe_assocs:
+            all_assocs.append(assoc)
 
     # Centralized processing of all nodes and edges
     entities_data = []
     relationships_data = []
+    associations_nodes = []
 
     # Merge nodes and edges
     # Use graph database lock to ensure atomic merges and updates
@@ -588,9 +701,21 @@ async def merge_nodes_and_edges(
             if edge_data is not None:
                 relationships_data.append(edge_data)
 
+        for assoc in all_assocs:
+            assoc_node = await _merge_association_then_upsert(
+                assoc,
+                knowledge_graph_inst,
+                global_config,
+                pipeline_status,
+                pipeline_status_lock,
+                llm_response_cache,
+            )
+            associations_nodes.append(assoc_node)
+
         # Update total counts
         total_entities_count = len(entities_data)
         total_relations_count = len(relationships_data)
+        total_assoc_count = len(associations_nodes)
 
         log_message = f"Updating {total_entities_count} entities  {current_file_number}/{total_files}: {file_path}"
         logger.info(log_message)
@@ -600,20 +725,21 @@ async def merge_nodes_and_edges(
                 pipeline_status["history_messages"].append(log_message)
 
         # Update vector databases with all collected data
-        if entity_vdb is not None and entities_data:
+        if entity_vdb is not None and (entities_data or associations_nodes):
+            all_nodes_data = entities_data + associations_nodes
             data_for_vdb = {
                 compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
                     "entity_name": dp["entity_name"],
-                    "entity_type": dp["entity_type"],
+                    "entity_type": dp.get("entity_type", "UNKNOWN"),
                     "content": f"{dp['entity_name']}\n{dp['description']}",
-                    "source_id": dp["source_id"],
+                    "source_id": dp.get("source_id"),
                     "file_path": dp.get("file_path", "unknown_source"),
                 }
-                for dp in entities_data
+                for dp in all_nodes_data
             }
             await entity_vdb.upsert(data_for_vdb)
 
-        log_message = f"Updating {total_relations_count} relations {current_file_number}/{total_files}: {file_path}"
+        log_message = f"Updating {total_relations_count} relations and {total_assoc_count} associations {current_file_number}/{total_files}: {file_path}"
         logger.info(log_message)
         if pipeline_status is not None:
             async with pipeline_status_lock:
@@ -700,6 +826,7 @@ async def extract_entities(
         """
         maybe_nodes = defaultdict(list)
         maybe_edges = defaultdict(list)
+        maybe_assocs = []
 
         records = split_string_by_multi_markers(
             result,
@@ -729,8 +856,14 @@ async def extract_entities(
                 maybe_edges[(if_relation["src_id"], if_relation["tgt_id"])].append(
                     if_relation
                 )
+            else:
+                if_assoc = await _handle_single_association_extraction(
+                    record_attributes, chunk_key, file_path
+                )
+                if if_assoc is not None:
+                    maybe_assocs.append(if_assoc)
 
-        return maybe_nodes, maybe_edges
+        return maybe_nodes, maybe_edges, maybe_assocs
 
     async def _process_single_content(chunk_key_dp: tuple[str, TextChunkSchema]):
         """Process a single chunk
@@ -761,7 +894,7 @@ async def extract_entities(
         history = pack_user_ass_to_openai_messages(hint_prompt, final_result)
 
         # Process initial extraction with file path
-        maybe_nodes, maybe_edges = await _process_extraction_result(
+        maybe_nodes, maybe_edges, maybe_assocs = await _process_extraction_result(
             final_result, chunk_key, file_path
         )
 
@@ -778,7 +911,7 @@ async def extract_entities(
             history += pack_user_ass_to_openai_messages(continue_prompt, glean_result)
 
             # Process gleaning result separately with file path
-            glean_nodes, glean_edges = await _process_extraction_result(
+            glean_nodes, glean_edges, glean_assocs = await _process_extraction_result(
                 glean_result, chunk_key, file_path
             )
 
@@ -789,10 +922,10 @@ async def extract_entities(
                 ):  # Only accetp entities with new name in gleaning stage
                     maybe_nodes[entity_name].extend(entities)
             for edge_key, edges in glean_edges.items():
-                if (
-                    edge_key not in maybe_edges
-                ):  # Only accetp edges with new name in gleaning stage
+                if edge_key not in maybe_edges:
                     maybe_edges[edge_key].extend(edges)
+            for assoc in glean_assocs:
+                maybe_assocs.append(assoc)
 
             if now_glean_index == entity_extract_max_gleaning - 1:
                 break
@@ -811,15 +944,16 @@ async def extract_entities(
         processed_chunks += 1
         entities_count = len(maybe_nodes)
         relations_count = len(maybe_edges)
-        log_message = f"Chunk {processed_chunks} of {total_chunks} extracted {entities_count} Ent + {relations_count} Rel"
+        assoc_count = len(maybe_assocs)
+        log_message = f"Chunk {processed_chunks} of {total_chunks} extracted {entities_count} Ent + {relations_count} Rel + {assoc_count} Assoc"
         logger.info(log_message)
         if pipeline_status is not None:
             async with pipeline_status_lock:
                 pipeline_status["latest_message"] = log_message
                 pipeline_status["history_messages"].append(log_message)
 
-        # Return the extracted nodes and edges for centralized processing
-        return maybe_nodes, maybe_edges
+        # Return the extracted nodes, edges and associations for centralized processing
+        return maybe_nodes, maybe_edges, maybe_assocs
 
     # Get max async tasks limit from global_config
     llm_model_max_async = global_config.get("llm_model_max_async", 4)
@@ -1382,6 +1516,18 @@ async def _get_node_data(
         for k, n, d in zip(results, node_datas, node_degrees)
         if n is not None
     ]  # what is this text_chunks_db doing.  dont remember it in airvx.  check the diagram.
+
+    for nd in node_datas:
+        score = 0.0
+        for other in node_datas:
+            if nd["entity_name"] == other["entity_name"]:
+                continue
+            length = await knowledge_graph_inst.shortest_path_lengh(nd["entity_name"], other["entity_name"])
+            if length != -1:
+                score += 1 / (length + 1)
+        nd["connectivity"] = score
+
+    node_datas = sorted(node_datas, key=lambda x: (x["rank"], x["connectivity"]), reverse=True)
     # get entitytext chunk
     use_text_units = await _find_most_related_text_unit_from_entities(
         node_datas,
@@ -1616,16 +1762,30 @@ async def _find_most_related_edges_from_entities(
                 )
                 edge_props["weight"] = 0.0
 
+            connectivity = 0.0
+            for nd in node_datas:
+                ent = nd["entity_name"]
+                if ent in pair:
+                    continue
+                l1 = await knowledge_graph_inst.shortest_path_lengh(pair[0], ent)
+                l2 = await knowledge_graph_inst.shortest_path_lengh(pair[1], ent)
+                lengths = [l for l in (l1, l2) if l != -1]
+                if lengths:
+                    connectivity += 1 / (min(lengths) + 1)
+
             combined = {
                 "src_tgt": pair,
                 "rank": edge_degrees_dict.get(pair, 0),
+                "connectivity": connectivity,
                 **edge_props,
             }
             all_edges_data.append(combined)
 
     tokenizer: Tokenizer = knowledge_graph_inst.global_config.get("tokenizer")
     all_edges_data = sorted(
-        all_edges_data, key=lambda x: (x["rank"], x["weight"]), reverse=True
+        all_edges_data,
+        key=lambda x: (x["rank"], x.get("weight", 0), x.get("connectivity", 0)),
+        reverse=True,
     )
     all_edges_data = truncate_list_by_token_size(
         all_edges_data,
@@ -1695,7 +1855,9 @@ async def _get_edge_data(
 
     tokenizer: Tokenizer = text_chunks_db.global_config.get("tokenizer")
     edge_datas = sorted(
-        edge_datas, key=lambda x: (x["rank"], x["weight"]), reverse=True
+        edge_datas,
+        key=lambda x: (x["rank"], x.get("weight", 0)),
+        reverse=True,
     )
     edge_datas = truncate_list_by_token_size(
         edge_datas,
@@ -1715,6 +1877,29 @@ async def _get_edge_data(
             text_chunks_db,
             knowledge_graph_inst,
         ),
+    )
+
+    for e in edge_datas:
+        score = 0.0
+        for n in use_entities:
+            ent = n["entity_name"]
+            if ent in (e["src_id"], e["tgt_id"]):
+                continue
+            l1 = await knowledge_graph_inst.shortest_path_lengh(e["src_id"], ent)
+            l2 = await knowledge_graph_inst.shortest_path_lengh(e["tgt_id"], ent)
+            lengths = [l for l in (l1, l2) if l != -1]
+            if lengths:
+                score += 1 / (min(lengths) + 1)
+        e["connectivity"] = score
+
+    edge_datas = sorted(
+        edge_datas,
+        key=lambda x: (
+            x["rank"],
+            x.get("weight", 0),
+            x.get("connectivity", 0),
+        ),
+        reverse=True,
     )
     logger.info(
         f"Global query uses {len(use_entities)} entites, {len(edge_datas)} relations, {len(use_text_units)} chunks"
@@ -1739,6 +1924,7 @@ async def _get_edge_data(
                 "keywords": e["keywords"],
                 "weight": e["weight"],
                 "rank": e["rank"],
+                "connectivity": e.get("connectivity", 0),
                 "created_at": created_at,
                 "file_path": file_path,
             }
