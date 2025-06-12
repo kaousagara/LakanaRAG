@@ -2,7 +2,7 @@
 LightRAG FastAPI Server
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Security
 import asyncio
 import os
 import logging
@@ -15,6 +15,8 @@ from pathlib import Path
 import configparser
 from ascii_colors import ASCIIColors
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
+from starlette.status import HTTP_403_FORBIDDEN
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from lightrag.api.utils_api import (
@@ -22,6 +24,7 @@ from lightrag.api.utils_api import (
     display_splash_screen,
     check_env_file,
 )
+from pydantic import BaseModel
 from .config import (
     global_args,
     update_uvicorn_mode_config,
@@ -416,14 +419,15 @@ def create_app(args):
                 "webui_description": webui_description,
             }
         username = form_data.username
-        if auth_handler.accounts.get(username) != form_data.password:
+        account = auth_handler.accounts.get(username)
+        if not account or not account.get("active") or account.get("password") != form_data.password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials"
             )
 
-        # Regular user login
+        role = account.get("role", "user")
         user_token = auth_handler.create_token(
-            username=username, role="user", metadata={"auth_mode": "enabled"}
+            username=username, role=role, metadata={"auth_mode": "enabled"}
         )
         return {
             "access_token": user_token,
@@ -434,6 +438,42 @@ def create_app(args):
             "webui_title": webui_title,
             "webui_description": webui_description,
         }
+
+    class AccountCreate(BaseModel):
+        username: str
+        password: str
+        role: str = "user"
+        active: bool = True
+
+    class AccountUpdate(BaseModel):
+        password: str | None = None
+        role: str | None = None
+        active: bool | None = None
+
+    def admin_auth(token: str = Security(OAuth2PasswordBearer(tokenUrl="login"))):
+        info = auth_handler.validate_token(token)
+        if info.get("role") != "admin":
+            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Admin access required")
+
+    if auth_configured:
+        @app.get("/accounts", dependencies=[Depends(admin_auth)])
+        async def list_accounts():
+            return {"accounts": auth_handler.list_accounts()}
+
+        @app.post("/accounts", dependencies=[Depends(admin_auth)])
+        async def create_account(account: AccountCreate):
+            auth_handler.add_account(account.username, account.password, account.role, account.active)
+            return {"status": "success", "message": "created"}
+
+        @app.put("/accounts/{username}", dependencies=[Depends(admin_auth)])
+        async def update_account(username: str, account: AccountUpdate):
+            auth_handler.update_account(username, account.password, account.role, account.active)
+            return {"status": "success", "message": "updated"}
+
+        @app.delete("/accounts/{username}", dependencies=[Depends(admin_auth)])
+        async def delete_account(username: str):
+            auth_handler.delete_account(username)
+            return {"status": "success", "message": "deleted"}
 
     @app.get("/health", dependencies=[Depends(combined_auth)])
     async def get_status():

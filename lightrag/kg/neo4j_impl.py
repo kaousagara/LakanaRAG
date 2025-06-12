@@ -1045,6 +1045,18 @@ class Neo4JStorage(BaseGraphStorage):
 
         return result
 
+    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+        query = (
+            "MATCH (a:base {entity_id:$src}), (b:base {entity_id:$tgt}), "
+            "p=shortestPath((a)-[*..15]-(b)) RETURN length(p) AS len"
+        )
+        async with self._driver.session(database=self._DATABASE) as session:
+            result = await session.run(query, src=source_node_id, tgt=target_node_id)
+            record = await result.single()
+            if record and record["len"] is not None:
+                return int(record["len"])
+        return -1
+
     async def _robust_fallback(
         self, node_label: str, max_depth: int, max_nodes: int
     ) -> KnowledgeGraph:

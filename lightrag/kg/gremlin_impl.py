@@ -300,6 +300,31 @@ class GremlinStorage(BaseGraphStorage):
 
         return edges
 
+    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+        if source_node_id == target_node_id:
+            return 0
+
+        visited = {source_node_id}
+        frontier = [(source_node_id, 0)]
+        MAX_DEPTH = 15
+
+        while frontier:
+            current, depth = frontier.pop(0)
+            if depth >= MAX_DEPTH:
+                continue
+            edges = await self.get_node_edges(current)
+            if not edges:
+                continue
+            for src, tgt in edges:
+                neighbor = tgt if src == current else src
+                if neighbor == target_node_id:
+                    return depth + 1
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    frontier.append((neighbor, depth + 1))
+
+        return -1
+
     @retry(
         stop=stop_after_attempt(10),
         wait=wait_exponential(multiplier=1, min=4, max=10),

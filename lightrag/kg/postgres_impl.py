@@ -2261,6 +2261,20 @@ class PGGraphStorage(BaseGraphStorage):
 
         return kg
 
+    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+        src_label = self._normalize_node_id(source_node_id)
+        tgt_label = self._normalize_node_id(target_node_id)
+        query = f"""SELECT * FROM cypher('{self.graph_name}', $$
+                    MATCH (a:base {{entity_id: '{src_label}'}}),
+                          (b:base {{entity_id: '{tgt_label}'}}),
+                          p = shortestPath((a)-[*..15]-(b))
+                    RETURN length(p) AS len
+                $$) AS (len integer)"""
+        record = await self._query(query)
+        if record and record[0] and record[0]["len"] is not None:
+            return int(record[0]["len"])
+        return -1
+
     async def drop(self) -> dict[str, str]:
         """Drop the storage"""
         try:
