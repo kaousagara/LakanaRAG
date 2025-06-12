@@ -357,6 +357,14 @@ class NetworkXStorage(BaseGraphStorage):
         )
         return result
 
+    async def shortest_path_lengh(self, source_node_id: str, target_node_id: str) -> int:
+        graph = await self._get_graph()
+        try:
+            length = nx.shortest_path_length(graph, source=source_node_id, target=target_node_id)
+            return int(length)
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            return -1
+
     async def index_done_callback(self) -> bool:
         """Save data to disk"""
         async with self._storage_lock:

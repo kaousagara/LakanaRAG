@@ -19,6 +19,7 @@ interface BackendState {
 interface AuthState {
   isAuthenticated: boolean;
   isGuestMode: boolean;  // Add guest mode flag
+  isAdmin: boolean;
   coreVersion: string | null;
   apiVersion: string | null;
   username: string | null; // login username
@@ -118,7 +119,12 @@ const isGuestToken = (token: string): boolean => {
   return payload.role === 'guest';
 };
 
-const initAuthState = (): { isAuthenticated: boolean; isGuestMode: boolean; coreVersion: string | null; apiVersion: string | null; username: string | null; webuiTitle: string | null; webuiDescription: string | null } => {
+const isAdminToken = (token: string): boolean => {
+  const payload = parseTokenPayload(token);
+  return payload.role === 'admin';
+};
+
+const initAuthState = (): { isAuthenticated: boolean; isGuestMode: boolean; isAdmin: boolean; coreVersion: string | null; apiVersion: string | null; username: string | null; webuiTitle: string | null; webuiDescription: string | null } => {
   const token = localStorage.getItem('LIGHTRAG-API-TOKEN');
   const coreVersion = localStorage.getItem('LIGHTRAG-CORE-VERSION');
   const apiVersion = localStorage.getItem('LIGHTRAG-API-VERSION');
@@ -130,6 +136,7 @@ const initAuthState = (): { isAuthenticated: boolean; isGuestMode: boolean; core
     return {
       isAuthenticated: false,
       isGuestMode: false,
+      isAdmin: false,
       coreVersion: coreVersion,
       apiVersion: apiVersion,
       username: null,
@@ -141,6 +148,7 @@ const initAuthState = (): { isAuthenticated: boolean; isGuestMode: boolean; core
   return {
     isAuthenticated: true,
     isGuestMode: isGuestToken(token),
+    isAdmin: isAdminToken(token),
     coreVersion: coreVersion,
     apiVersion: apiVersion,
     username: username,
@@ -156,6 +164,7 @@ export const useAuthStore = create<AuthState>(set => {
   return {
     isAuthenticated: initialState.isAuthenticated,
     isGuestMode: initialState.isGuestMode,
+    isAdmin: initialState.isAdmin,
     coreVersion: initialState.coreVersion,
     apiVersion: initialState.apiVersion,
     username: initialState.username,
@@ -188,6 +197,7 @@ export const useAuthStore = create<AuthState>(set => {
       set({
         isAuthenticated: true,
         isGuestMode: isGuest,
+        isAdmin: isAdminToken(token),
         username: username,
         coreVersion: coreVersion,
         apiVersion: apiVersion,
@@ -207,6 +217,7 @@ export const useAuthStore = create<AuthState>(set => {
       set({
         isAuthenticated: false,
         isGuestMode: false,
+        isAdmin: false,
         username: null,
         coreVersion: coreVersion,
         apiVersion: apiVersion,

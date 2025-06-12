@@ -11,6 +11,7 @@
     "knowledgeGraph": "شبكة المعرفة",
     "retrieval": "الاسترجاع",
     "api": "واجهة برمجة التطبيقات",
+    "accounts": "الحسابات",
     "projectRepository": "مستودع المشروع",
     "logout": "تسجيل الخروج",
     "themeToggle": {
@@ -350,8 +351,17 @@
       "streamResponseTooltip": "إذا كان صحيحًا، يتيح إخراج التدفق للردود في الوقت الفعلي",
       "userPrompt": "مطالبة مخصصة",
       "userPromptTooltip": "تقديم متطلبات استجابة إضافية إلى نموذج اللغة الكبير (غير متعلقة بمحتوى الاستعلام، فقط لمعالجة المخرجات).",
-      "userPromptPlaceholder": "أدخل مطالبة مخصصة (اختياري)"
+    "userPromptPlaceholder": "أدخل مطالبة مخصصة (اختياري)"
     }
+  },
+  "accountManager": {
+    "title": "إدارة الحسابات",
+    "create": "إنشاء",
+    "delete": "حذف",
+    "username": "اسم المستخدم",
+    "password": "كلمة المرور",
+    "role": "الدور",
+    "active": "نشط"
   },
   "apiSite": {
     "loading": "جارٍ تحميل وثائق واجهة برمجة التطبيقات..."

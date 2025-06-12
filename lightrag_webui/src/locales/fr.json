@@ -11,6 +11,7 @@
     "knowledgeGraph": "Graphe de connaissances",
     "retrieval": "Récupération",
     "api": "API",
+    "accounts": "Comptes",
     "projectRepository": "Référentiel du projet",
     "logout": "Déconnexion",
     "themeToggle": {
@@ -350,8 +351,17 @@
       "streamResponseTooltip": "Si vrai, active la sortie en flux pour des réponses en temps réel",
       "userPrompt": "Invite personnalisée",
       "userPromptTooltip": "Fournir des exigences de réponse supplémentaires au LLM (sans rapport avec le contenu de la requête, uniquement pour le traitement de sortie).",
-      "userPromptPlaceholder": "Entrez une invite personnalisée (facultatif)"
+    "userPromptPlaceholder": "Entrez une invite personnalisée (facultatif)"
     }
+  },
+  "accountManager": {
+    "title": "Gestion des comptes",
+    "create": "Créer",
+    "delete": "Supprimer",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "role": "Rôle",
+    "active": "Actif"
   },
   "apiSite": {
     "loading": "Chargement de la documentation de l'API..."

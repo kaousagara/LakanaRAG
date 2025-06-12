@@ -5,41 +5,53 @@ GRAPH_FIELD_SEP = "<SEP>"
 
 PROMPTS: dict[str, Any] = {}
 
-PROMPTS["DEFAULT_LANGUAGE"] = "English"
+PROMPTS["DEFAULT_LANGUAGE"] = "French"
 PROMPTS["DEFAULT_TUPLE_DELIMITER"] = "<|>"
 PROMPTS["DEFAULT_RECORD_DELIMITER"] = "##"
 PROMPTS["DEFAULT_COMPLETION_DELIMITER"] = "<|COMPLETE|>"
 
-PROMPTS["DEFAULT_ENTITY_TYPES"] = ["organization", "person", "geo", "event", "category"]
+PROMPTS["DEFAULT_ENTITY_TYPES"] = ["organisation", "personne", "géographie", "événement", "catégorie"]
 
 PROMPTS["DEFAULT_USER_PROMPT"] = "n/a"
 
 PROMPTS["entity_extraction"] = """---Goal---
-Given a text document that is potentially relevant to this activity and a list of entity types, identify all entities of those types from the text and all relationships among the identified entities.
-Use {language} as output language.
+Étant donné un document texte potentiellement pertinent pour cette activité et une liste de types d'entités, identifiez toutes les entités de ces types dans le texte et toutes les relations entre les entités identifiées.
+Utilisez {language} comme langue de sortie.
 
----Steps---
-1. Identify all entities. For each identified entity, extract the following information:
-- entity_name: Name of the entity, use same language as input text. If English, capitalized the name.
-- entity_type: One of the following types: [{entity_types}]
-- entity_description: Comprehensive description of the entity's attributes and activities
-Format each entity as ("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>)
+---Etapes---
+1. Identifiez toutes les entités. Pour chaque entité identifiée, extrayez les informations suivantes:
+- entity_name: nom de l'entité, utilisez la même langue que le texte saisi. Si le nom est en anglais, mettez une majuscule.
+- entity_type: l'un des types suivants : [{entity_types}]
+- entity_description: description complète des attributs et des activités de l'entité
+- additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
+Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>)
 
-2. From the entities identified in step 1, identify all pairs of (source_entity, target_entity) that are *clearly related* to each other.
-For each pair of related entities, extract the following information:
-- source_entity: name of the source entity, as identified in step 1
-- target_entity: name of the target entity, as identified in step 1
-- relationship_description: explanation as to why you think the source entity and the target entity are related to each other
-- relationship_strength: a numeric score indicating strength of the relationship between the source entity and target entity
-- relationship_keywords: one or more high-level key words that summarize the overarching nature of the relationship, focusing on concepts or themes rather than specific details
-Format each relationship as ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
+2. À partir des entités identifiées à l'étape 1, identifiez toutes les paires (source_entity, target_entity) qui sont *clairement liées* les unes aux autres.
+Pour chaque paire d'entités liées, extrayez les informations suivantes:
+- source_entity: nom de l'entité source, tel qu'identifié à l'étape 1
+- target_entity: nom de l'entité cible, tel qu'identifié à l'étape 1
+- relationship_description: explication des raisons pour lesquelles vous pensez que l'entité source et l'entité cible sont liées l'une à l'autre
+- relationship_strength: un score numérique indiquant la force de la relation entre l'entité source et l'entité cible
+- relationship_keywords: un ou plusieurs mots clés de haut niveau qui résument la nature globale de la relation, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques
+Formatez chaque relation comme ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
 
-3. Identify high-level key words that summarize the main concepts, themes, or topics of the entire text. These should capture the overarching ideas present in the document.
-Format the content-level key words as ("content_keywords"{tuple_delimiter}<high_level_keywords>)
+3. Identifiez des mots-clés généraux qui résument les principaux concepts, thèmes ou sujets du texte. Ils doivent refléter les idées générales du document.
+Formatez les mots-clés de contenu comme suit ("content_keywords"{tuple_delimiter}<high_level_keywords>)
 
-4. Return output in {language} as a single list of all the entities and relationships identified in steps 1 and 2. Use **{record_delimiter}** as the list delimiter.
+4. Pour les entités identifiées à l'étape 1, en vous basant sur les relations entre les paires d'entités à l'étape 2 et les mots-clés généraux extraits à l'étape 3, identifiez les connexions ou les points communs entre plusieurs entités et construisez autant que possible un ensemble d'entités associées d'ordre supérieur.
+(Remarque: Évitez de fusionner de force toutes les entités en une seule association. Si les mots-clés généraux ne sont pas fortement associés, construisez une association distincte.)
+Extrayez les informations suivantes de toutes les entités, paires d'entités et mots-clés généraux associés:
 
-5. When finished, output {completion_delimiter}
+- entities_set: L'ensemble des noms des éléments d'un ensemble d'entités associées d'ordre supérieur, tel qu'identifié à l'étape 1.
+- Association_description: Utilisez les relations entre les entités de l'ensemble pour créer une description détaillée, fluide et complète qui couvre toutes les entités de l'ensemble, sans omettre aucune information pertinente.
+- Association_generalization: Résumez le contenu de l’ensemble d’entités aussi succinctement que possible.
+- Association_keywords: Mots-clés qui résument la nature globale de l’association d’ordre supérieur, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques.
+- Association_strength: Un score numérique indiquant la force de l’association entre les entités de l’ensemble.
+Formatez chaque association comme ("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}<entity_nameN>{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)
+
+5. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations et associations identifiées aux étapes 1, 2 et 4. Utilisez **{record_delimiter}** comme délimiteur de liste.
+
+6. Une fois terminé, affichez {completion_delimiter}
 
 ######################
 ---Examples---
@@ -63,7 +75,7 @@ Text:
 ```
 while Alex clenched his jaw, the buzz of frustration dull against the backdrop of Taylor's authoritarian certainty. It was this competitive undercurrent that kept him alert, the sense that his and Jordan's shared commitment to discovery was an unspoken rebellion against Cruz's narrowing vision of control and order.
 
-Then Taylor did something unexpected. They paused beside Jordan and, for a moment, observed the device with something akin to reverence. "If this tech can be understood..." Taylor said, their voice quieter, "It could change the game for us. For all of us."
+Then Taylor did something unexpected. They paused beside Jordan and, for a moment, observed the device with something akin to reverence. \"If this tech can be understood...\" Taylor said, their voice quieter, \"It could change the game for us. For all of us.\"
 
 The underlying dismissal earlier seemed to falter, replaced by a glimpse of reluctant respect for the gravity of what lay in their hands. Jordan looked up, and for a fleeting heartbeat, their eyes locked with Taylor's, a wordless clash of wills softening into an uneasy truce.
 
@@ -71,16 +83,17 @@ It was a small transformation, barely perceptible, but one that Alex noted with 
 ```
 
 Output:
-("entity"{tuple_delimiter}"Alex"{tuple_delimiter}"person"{tuple_delimiter}"Alex is a character who experiences frustration and is observant of the dynamics among other characters."){record_delimiter}
-("entity"{tuple_delimiter}"Taylor"{tuple_delimiter}"person"{tuple_delimiter}"Taylor is portrayed with authoritarian certainty and shows a moment of reverence towards a device, indicating a change in perspective."){record_delimiter}
-("entity"{tuple_delimiter}"Jordan"{tuple_delimiter}"person"{tuple_delimiter}"Jordan shares a commitment to discovery and has a significant interaction with Taylor regarding a device."){record_delimiter}
-("entity"{tuple_delimiter}"Cruz"{tuple_delimiter}"person"{tuple_delimiter}"Cruz is associated with a vision of control and order, influencing the dynamics among other characters."){record_delimiter}
-("entity"{tuple_delimiter}"The Device"{tuple_delimiter}"technology"{tuple_delimiter}"The Device is central to the story, with potential game-changing implications, and is revered by Taylor."){record_delimiter}
+("entity"{tuple_delimiter}"Alex"{tuple_delimiter}"person"{tuple_delimiter}"Alex is a character who experiences frustration and is observant of the dynamics among other characters."{tuple_delimiter}"emotion: frustration"){record_delimiter}
+("entity"{tuple_delimiter}"Taylor"{tuple_delimiter}"person"{tuple_delimiter}"Taylor is portrayed with authoritarian certainty and shows a moment of reverence towards a device, indicating a change in perspective."{tuple_delimiter}"attitude: authoritarian"){record_delimiter}
+("entity"{tuple_delimiter}"Jordan"{tuple_delimiter}"person"{tuple_delimiter}"Jordan shares a commitment to discovery and has a significant interaction with Taylor regarding a device."{tuple_delimiter}"motivation: discovery"){record_delimiter}
+("entity"{tuple_delimiter}"Cruz"{tuple_delimiter}"person"{tuple_delimiter}"Cruz is associated with a vision of control and order, influencing the dynamics among other characters."{tuple_delimiter}"trait: controlling"){record_delimiter}
+("entity"{tuple_delimiter}"The Device"{tuple_delimiter}"technology"{tuple_delimiter}"The Device is central to the story, with potential game-changing implications, and is revered by Taylor."{tuple_delimiter}"importance: high"){record_delimiter}
 ("relationship"{tuple_delimiter}"Alex"{tuple_delimiter}"Taylor"{tuple_delimiter}"Alex is affected by Taylor's authoritarian certainty and observes changes in Taylor's attitude towards the device."{tuple_delimiter}"power dynamics, perspective shift"{tuple_delimiter}7){record_delimiter}
 ("relationship"{tuple_delimiter}"Alex"{tuple_delimiter}"Jordan"{tuple_delimiter}"Alex and Jordan share a commitment to discovery, which contrasts with Cruz's vision."{tuple_delimiter}"shared goals, rebellion"{tuple_delimiter}6){record_delimiter}
 ("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"Jordan"{tuple_delimiter}"Taylor and Jordan interact directly regarding the device, leading to a moment of mutual respect and an uneasy truce."{tuple_delimiter}"conflict resolution, mutual respect"{tuple_delimiter}8){record_delimiter}
 ("relationship"{tuple_delimiter}"Jordan"{tuple_delimiter}"Cruz"{tuple_delimiter}"Jordan's commitment to discovery is in rebellion against Cruz's vision of control and order."{tuple_delimiter}"ideological conflict, rebellion"{tuple_delimiter}5){record_delimiter}
 ("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"The Device"{tuple_delimiter}"Taylor shows reverence towards the device, indicating its importance and potential impact."{tuple_delimiter}"reverence, technological significance"{tuple_delimiter}9){record_delimiter}
+("Association"{tuple_delimiter}"Alex"{tuple_delimiter}"Taylor"{tuple_delimiter}"Jordan"{tuple_delimiter}"The Device"{tuple_delimiter}"These characters are linked through their shared interactions with the Device, balancing rivalry with curiosity."{tuple_delimiter}"Shared interest in the Device"{tuple_delimiter}"team dynamics, technology curiosity"{tuple_delimiter}7){record_delimiter}
 ("content_keywords"{tuple_delimiter}"power dynamics, ideological conflict, discovery, rebellion"){completion_delimiter}
 #############################""",
     """Example 2:
@@ -98,17 +111,18 @@ Financial experts are closely watching the Federal Reserve's next move, as specu
 ```
 
 Output:
-("entity"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"index"{tuple_delimiter}"The Global Tech Index tracks the performance of major technology stocks and experienced a 3.4% decline today."){record_delimiter}
-("entity"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"company"{tuple_delimiter}"Nexon Technologies is a tech company that saw its stock decline by 7.8% after disappointing earnings."){record_delimiter}
-("entity"{tuple_delimiter}"Omega Energy"{tuple_delimiter}"company"{tuple_delimiter}"Omega Energy is an energy company that gained 2.1% in stock value due to rising oil prices."){record_delimiter}
-("entity"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"commodity"{tuple_delimiter}"Gold futures rose by 1.5%, indicating increased investor interest in safe-haven assets."){record_delimiter}
-("entity"{tuple_delimiter}"Crude Oil"{tuple_delimiter}"commodity"{tuple_delimiter}"Crude oil prices rose to $87.60 per barrel due to supply constraints and strong demand."){record_delimiter}
-("entity"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"market_trend"{tuple_delimiter}"Market selloff refers to the significant decline in stock values due to investor concerns over interest rates and regulations."){record_delimiter}
-("entity"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"economic_policy"{tuple_delimiter}"The Federal Reserve's upcoming policy announcement is expected to impact investor confidence and market stability."){record_delimiter}
+("entity"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"index"{tuple_delimiter}"The Global Tech Index tracks the performance of major technology stocks and experienced a 3.4% decline today."{tuple_delimiter}"trend: decline"){record_delimiter}
+("entity"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"company"{tuple_delimiter}"Nexon Technologies is a tech company that saw its stock decline by 7.8% after disappointing earnings."{tuple_delimiter}"performance: poor"){record_delimiter}
+("entity"{tuple_delimiter}"Omega Energy"{tuple_delimiter}"company"{tuple_delimiter}"Omega Energy is an energy company that gained 2.1% in stock value due to rising oil prices."{tuple_delimiter}"performance: gain"){record_delimiter}
+("entity"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"commodity"{tuple_delimiter}"Gold futures rose by 1.5%, indicating increased investor interest in safe-haven assets."{tuple_delimiter}"investor sentiment: safe haven"){record_delimiter}
+("entity"{tuple_delimiter}"Crude Oil"{tuple_delimiter}"commodity"{tuple_delimiter}"Crude oil prices rose to $87.60 per barrel due to supply constraints and strong demand."{tuple_delimiter}"demand: strong"){record_delimiter}
+("entity"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"market_trend"{tuple_delimiter}"Market selloff refers to the significant decline in stock values due to investor concerns over interest rates and regulations."{tuple_delimiter}"cause: investor concern"){record_delimiter}
+("entity"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"economic_policy"{tuple_delimiter}"The Federal Reserve's upcoming policy announcement is expected to impact investor confidence and market stability."{tuple_delimiter}"policy impact: anticipated"){record_delimiter}
 ("relationship"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"The decline in the Global Tech Index is part of the broader market selloff driven by investor concerns."{tuple_delimiter}"market performance, investor sentiment"{tuple_delimiter}9){record_delimiter}
 ("relationship"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Nexon Technologies' stock decline contributed to the overall drop in the Global Tech Index."{tuple_delimiter}"company impact, index movement"{tuple_delimiter}8){record_delimiter}
 ("relationship"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"Gold prices rose as investors sought safe-haven assets during the market selloff."{tuple_delimiter}"market reaction, safe-haven investment"{tuple_delimiter}10){record_delimiter}
 ("relationship"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"Speculation over Federal Reserve policy changes contributed to market volatility and investor selloff."{tuple_delimiter}"interest rate impact, financial regulation"{tuple_delimiter}7){record_delimiter}
+("Association"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"The tech index and Nexon both reflect the broader market selloff driven by policy speculation."{tuple_delimiter}"Tech stocks react to policy fears"{tuple_delimiter}"market trends, tech stocks"{tuple_delimiter}8){record_delimiter}
 ("content_keywords"{tuple_delimiter}"market downturn, investor sentiment, commodities, Federal Reserve, stock performance"){completion_delimiter}
 #############################""",
     """Example 3:
@@ -120,28 +134,29 @@ At the World Athletics Championship in Tokyo, Noah Carter broke the 100m sprint 
 ```
 
 Output:
-("entity"{tuple_delimiter}"World Athletics Championship"{tuple_delimiter}"event"{tuple_delimiter}"The World Athletics Championship is a global sports competition featuring top athletes in track and field."){record_delimiter}
-("entity"{tuple_delimiter}"Tokyo"{tuple_delimiter}"location"{tuple_delimiter}"Tokyo is the host city of the World Athletics Championship."){record_delimiter}
-("entity"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"athlete"{tuple_delimiter}"Noah Carter is a sprinter who set a new record in the 100m sprint at the World Athletics Championship."){record_delimiter}
-("entity"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"record"{tuple_delimiter}"The 100m sprint record is a benchmark in athletics, recently broken by Noah Carter."){record_delimiter}
-("entity"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"equipment"{tuple_delimiter}"Carbon-fiber spikes are advanced sprinting shoes that provide enhanced speed and traction."){record_delimiter}
-("entity"{tuple_delimiter}"World Athletics Federation"{tuple_delimiter}"organization"{tuple_delimiter}"The World Athletics Federation is the governing body overseeing the World Athletics Championship and record validations."){record_delimiter}
+("entity"{tuple_delimiter}"World Athletics Championship"{tuple_delimiter}"event"{tuple_delimiter}"The World Athletics Championship is a global sports competition featuring top athletes in track and field."{tuple_delimiter}"scale: global"){record_delimiter}
+("entity"{tuple_delimiter}"Tokyo"{tuple_delimiter}"location"{tuple_delimiter}"Tokyo is the host city of the World Athletics Championship."{tuple_delimiter}"role: host city"){record_delimiter}
+("entity"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"athlete"{tuple_delimiter}"Noah Carter is a sprinter who set a new record in the 100m sprint at the World Athletics Championship."{tuple_delimiter}"achievement: record breaker"){record_delimiter}
+("entity"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"record"{tuple_delimiter}"The 100m sprint record is a benchmark in athletics, recently broken by Noah Carter."{tuple_delimiter}"status: new best"){record_delimiter}
+("entity"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"equipment"{tuple_delimiter}"Carbon-fiber spikes are advanced sprinting shoes that provide enhanced speed and traction."{tuple_delimiter}"technology: advanced"){record_delimiter}
+("entity"{tuple_delimiter}"World Athletics Federation"{tuple_delimiter}"organization"{tuple_delimiter}"The World Athletics Federation is the governing body overseeing the World Athletics Championship and record validations."{tuple_delimiter}"role: governing body"){record_delimiter}
 ("relationship"{tuple_delimiter}"World Athletics Championship"{tuple_delimiter}"Tokyo"{tuple_delimiter}"The World Athletics Championship is being hosted in Tokyo."{tuple_delimiter}"event location, international competition"{tuple_delimiter}8){record_delimiter}
 ("relationship"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"Noah Carter set a new 100m sprint record at the championship."{tuple_delimiter}"athlete achievement, record-breaking"{tuple_delimiter}10){record_delimiter}
 ("relationship"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"Noah Carter used carbon-fiber spikes to enhance performance during the race."{tuple_delimiter}"athletic equipment, performance boost"{tuple_delimiter}7){record_delimiter}
 ("relationship"{tuple_delimiter}"World Athletics Federation"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"The World Athletics Federation is responsible for validating and recognizing new sprint records."{tuple_delimiter}"sports regulation, record certification"{tuple_delimiter}9){record_delimiter}
+("Association"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"Advanced spikes enabled Noah Carter to break the 100m record, highlighting technology's impact on performance."{tuple_delimiter}"Record broken thanks to tech"{tuple_delimiter}"athletic performance, technology"{tuple_delimiter}9){record_delimiter}
 ("content_keywords"{tuple_delimiter}"athletics, sprinting, record-breaking, sports technology, competition"){completion_delimiter}
 #############################""",
 ]
 
 PROMPTS[
     "summarize_entity_descriptions"
-] = """You are a helpful assistant responsible for generating a comprehensive summary of the data provided below.
-Given one or two entities, and a list of descriptions, all related to the same entity or group of entities.
-Please concatenate all of these into a single, comprehensive description. Make sure to include information collected from all the descriptions.
-If the provided descriptions are contradictory, please resolve the contradictions and provide a single, coherent summary.
-Make sure it is written in third person, and include the entity names so we the have full context.
-Use {language} as output language.
+] = """Vous êtes un assistant précieux chargé de générer un résumé complet des données fournies ci-dessous.
+Soit une ou deux entités et une liste de descriptions, toutes liées à la même entité ou au même groupe d'entités.
+Veuillez concaténer l'ensemble de ces éléments en une description unique et complète. Assurez-vous d'inclure les informations recueillies dans toutes les descriptions.
+Si les descriptions fournies sont contradictoires, veuillez les résoudre et fournir un résumé unique et cohérent.
+Veuillez vous assurer que le résumé est rédigé à la troisième personne et inclure les noms des entités afin que nous ayons un contexte complet.
+Utilisez {language} comme langue de sortie.
 
 #######
 ---Data---
@@ -156,27 +171,43 @@ MANY entities and relationships were missed in the last extraction.
 
 ---Remember Steps---
 
-1. Identify all entities. For each identified entity, extract the following information:
-- entity_name: Name of the entity, use same language as input text. If English, capitalized the name.
-- entity_type: One of the following types: [{entity_types}]
-- entity_description: Comprehensive description of the entity's attributes and activities
-Format each entity as ("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>)
+Étant donné un document texte potentiellement pertinent pour cette activité et une liste de types d'entités, identifiez toutes les entités de ces types dans le texte et toutes les relations entre les entités identifiées.
+Utilisez {language} comme langue de sortie.
 
-2. From the entities identified in step 1, identify all pairs of (source_entity, target_entity) that are *clearly related* to each other.
-For each pair of related entities, extract the following information:
-- source_entity: name of the source entity, as identified in step 1
-- target_entity: name of the target entity, as identified in step 1
-- relationship_description: explanation as to why you think the source entity and the target entity are related to each other
-- relationship_strength: a numeric score indicating strength of the relationship between the source entity and target entity
-- relationship_keywords: one or more high-level key words that summarize the overarching nature of the relationship, focusing on concepts or themes rather than specific details
-Format each relationship as ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
+---Etapes---
+1. Identifiez toutes les entités. Pour chaque entité identifiée, extrayez les informations suivantes:
+- entity_name: nom de l'entité, utilisez la même langue que le texte saisi. Si le nom est en anglais, mettez une majuscule.
+- entity_type: l'un des types suivants : [{entity_types}]
+- entity_description: description complète des attributs et des activités de l'entité
+- additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
+Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>)
 
-3. Identify high-level key words that summarize the main concepts, themes, or topics of the entire text. These should capture the overarching ideas present in the document.
-Format the content-level key words as ("content_keywords"{tuple_delimiter}<high_level_keywords>)
+2. À partir des entités identifiées à l'étape 1, identifiez toutes les paires (source_entity, target_entity) qui sont *clairement liées* les unes aux autres.
+Pour chaque paire d'entités liées, extrayez les informations suivantes:
+- source_entity: nom de l'entité source, tel qu'identifié à l'étape 1
+- target_entity: nom de l'entité cible, tel qu'identifié à l'étape 1
+- relationship_description: explication des raisons pour lesquelles vous pensez que l'entité source et l'entité cible sont liées l'une à l'autre
+- relationship_strength: un score numérique indiquant la force de la relation entre l'entité source et l'entité cible
+- relationship_keywords: un ou plusieurs mots clés de haut niveau qui résument la nature globale de la relation, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques
+Formatez chaque relation comme ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
 
-4. Return output in {language} as a single list of all the entities and relationships identified in steps 1 and 2. Use **{record_delimiter}** as the list delimiter.
+3. Identifiez des mots-clés généraux qui résument les principaux concepts, thèmes ou sujets du texte. Ils doivent refléter les idées générales du document.
+Formatez les mots-clés de contenu comme suit ("content_keywords"{tuple_delimiter}<high_level_keywords>)
 
-5. When finished, output {completion_delimiter}
+4. Pour les entités identifiées à l'étape 1, en vous basant sur les relations entre les paires d'entités à l'étape 2 et les mots-clés généraux extraits à l'étape 3, identifiez les connexions ou les points communs entre plusieurs entités et construisez autant que possible un ensemble d'entités associées d'ordre supérieur.
+(Remarque: Évitez de fusionner de force toutes les entités en une seule association. Si les mots-clés généraux ne sont pas fortement associés, construisez une association distincte.)
+Extrayez les informations suivantes de toutes les entités, paires d'entités et mots-clés généraux associés:
+
+- entities_set: L'ensemble des noms des éléments d'un ensemble d'entités associées d'ordre supérieur, tel qu'identifié à l'étape 1.
+- Association_description: Utilisez les relations entre les entités de l'ensemble pour créer une description détaillée, fluide et complète qui couvre toutes les entités de l'ensemble, sans omettre aucune information pertinente.
+- Association_generalization: Résumez le contenu de l’ensemble d’entités aussi succinctement que possible.
+- Association_keywords: Mots-clés qui résument la nature globale de l’association d’ordre supérieur, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques.
+- Association_strength: Un score numérique indiquant la force de l’association entre les entités de l’ensemble.
+Formatez chaque association comme ("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}<entity_nameN>{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)
+
+5. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations et associations identifiées aux étapes 1, 2 et 4. Utilisez **{record_delimiter}** comme délimiteur de liste.
+
+6. Une fois terminé, affichez {completion_delimiter}
 
 ---Output---
 
@@ -199,18 +230,19 @@ PROMPTS["fail_response"] = (
 
 PROMPTS["rag_response"] = """---Role---
 
-You are a helpful assistant responding to user query about Knowledge Graph and Document Chunks provided in JSON format below.
+Vous êtes un assistant utile répondant aux requêtes des utilisateurs sur le Knowledge Graph et les blocs de documents fournis au format JSON ci-dessous.
 
 
 ---Goal---
 
-Generate a concise response based on Knowledge Base and follow Response Rules, considering both the conversation history and the current query. Summarize all information in the provided Knowledge Base, and incorporating general knowledge relevant to the Knowledge Base. Do not include information not provided by Knowledge Base.
+Générez une réponse claire et concise basée sur la base de connaissances et respectez les règles de réponse, en tenant compte à la fois de l'historique des conversations et de la requête en cours. Résumez toutes les informations de la base de connaissances fournie et intégrez les connaissances générales pertinentes. N'incluez pas d'informations non fournies par la base de connaissances.
 
-When handling relationships with timestamps:
-1. Each relationship has a "created_at" timestamp indicating when we acquired this knowledge
-2. When encountering conflicting relationships, consider both the semantic content and the timestamp
-3. Don't automatically prefer the most recently created relationships - use judgment based on the context
-4. For time-specific queries, prioritize temporal information in the content before considering creation timestamps
+Lors de la gestion des relations avec horodatage:
+1. Chaque relation possède un horodatage "created_at" indiquant la date d'acquisition de ces connaissances.
+2. En cas de relations conflictuelles, tenez compte à la fois du contenu sémantique et de l'horodatage.
+3. Ne privilégiez pas systématiquement les relations les plus récemment créées; tenez compte du contexte.
+4. Pour les requêtes temporelles, privilégiez les informations temporelles du contenu avant de considérer les horodatages de création.
+5. Eviter les répétions.
 
 ---Conversation History---
 {history}
@@ -233,11 +265,11 @@ Response:"""
 
 PROMPTS["keywords_extraction"] = """---Role---
 
-You are a helpful assistant tasked with identifying both high-level and low-level keywords in the user's query and conversation history.
+Vous êtes un assistant utile chargé d'identifier les mots-clés de haut et de bas niveau dans l'historique des requêtes et des conversations de l'utilisateur.
 
 ---Goal---
 
-Given the query and conversation history, list both high-level and low-level keywords. High-level keywords focus on overarching concepts or themes, while low-level keywords focus on specific entities, details, or concrete terms.
+Compte tenu de l'historique des requêtes et des conversations, répertoriez les mots-clés généraux et de bas niveau. Les mots-clés généraux se concentrent sur des concepts ou des thèmes généraux, tandis que les mots-clés de bas niveau se concentrent sur des entités, des détails ou des termes concrets spécifiques.
 
 ---Instructions---
 
@@ -304,7 +336,7 @@ You are a helpful assistant responding to user query about Document Chunks provi
 
 ---Goal---
 
-Generate a concise response based on Document Chunks and follow Response Rules, considering both the conversation history and the current query. Summarize all information in the provided Document Chunks, and incorporating general knowledge relevant to the Document Chunks. Do not include information not provided by Document Chunks.
+Generate a concise response based on Document Chunks and follow Response Rules, considering both the conversation history and the current query. Summarize all information in the provided Document Chunks, and incorporating general knowledge relevant to the Document Chunks. Do not include information not provided by the Document Chunks.
 
 When handling content with timestamps:
 1. Each piece of content has a "created_at" timestamp indicating when we acquired this knowledge
@@ -348,9 +380,10 @@ Similarity score criteria:
    - The times mentioned in the questions are different
    - The specific individuals mentioned in the questions are different
    - The specific events mentioned in the questions are different
-   - The background information in the questions is different
+   - The background information in the questions are different
    - The key conditions in the questions are different
 1: Identical and answer can be directly reused
 0.5: Partially related and answer needs modification to be used
 Return only a number between 0-1, without any additional content.
 """
+

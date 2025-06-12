@@ -33,22 +33,32 @@ function NavigationTab({ value, currentTab, children }: NavigationTabProps) {
 function TabsNavigation() {
   const currentTab = useSettingsStore.use.currentTab()
   const { t } = useTranslation()
+  const { isAdmin } = useAuthStore()
 
   return (
     <div className="flex h-8 self-center">
       <TabsList className="h-full gap-2">
-        <NavigationTab value="documents" currentTab={currentTab}>
-          {t('header.documents')}
-        </NavigationTab>
+        {isAdmin && (
+          <NavigationTab value="documents" currentTab={currentTab}>
+            {t('header.documents')}
+          </NavigationTab>
+        )}
         <NavigationTab value="knowledge-graph" currentTab={currentTab}>
           {t('header.knowledgeGraph')}
         </NavigationTab>
         <NavigationTab value="retrieval" currentTab={currentTab}>
           {t('header.retrieval')}
         </NavigationTab>
-        <NavigationTab value="api" currentTab={currentTab}>
-          {t('header.api')}
-        </NavigationTab>
+        {isAdmin && (
+          <NavigationTab value="api" currentTab={currentTab}>
+            {t('header.api')}
+          </NavigationTab>
+        )}
+        {isAdmin && (
+          <NavigationTab value="accounts" currentTab={currentTab}>
+            {t('header.accounts')}
+          </NavigationTab>
+        )}
       </TabsList>
     </div>
   )

@@ -11,6 +11,7 @@
     "knowledgeGraph": "Knowledge Graph",
     "retrieval": "Retrieval",
     "api": "API",
+    "accounts": "Accounts",
     "projectRepository": "Project Repository",
     "logout": "Logout",
     "themeToggle": {
@@ -350,8 +351,17 @@
       "streamResponseTooltip": "If True, enables streaming output for real-time responses",
       "userPrompt": "User Prompt",
       "userPromptTooltip": "Provide additional response requirements to the LLM (unrelated to query content, only for output processing).",
-      "userPromptPlaceholder": "Enter custom prompt (optional)"
+    "userPromptPlaceholder": "Enter custom prompt (optional)"
     }
+  },
+  "accountManager": {
+    "title": "Account Management",
+    "create": "Create",
+    "delete": "Delete",
+    "username": "Username",
+    "password": "Password",
+    "role": "Role",
+    "active": "Active"
   },
   "apiSite": {
     "loading": "Loading API Documentation..."

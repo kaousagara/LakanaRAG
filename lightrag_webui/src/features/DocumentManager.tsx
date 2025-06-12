@@ -15,6 +15,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import EmptyCard from '@/components/ui/EmptyCard'
 import UploadDocumentsDialog from '@/components/documents/UploadDocumentsDialog'
 import ClearDocumentsDialog from '@/components/documents/ClearDocumentsDialog'
+import { useAuthStore } from '@/stores/state'
 
 import { getDocuments, scanNewDocuments, DocsStatusesResponse, DocStatus, DocStatusResponse } from '@/api/lightrag'
 import { errorMessage } from '@/lib/utils'
@@ -161,6 +162,7 @@ export default function DocumentManager() {
   const { t, i18n } = useTranslation()
   const health = useBackendState.use.health()
   const pipelineBusy = useBackendState.use.pipelineBusy()
+  const isAdmin = useAuthStore.use.isAdmin()
   const [docs, setDocs] = useState<DocsStatusesResponse | null>(null)
   const currentTab = useSettingsStore.use.currentTab()
   const showFileName = useSettingsStore.use.showFileName()
@@ -499,7 +501,7 @@ export default function DocumentManager() {
             </Button>
           </div>
           <div className="flex-1" />
-          <ClearDocumentsDialog onDocumentsCleared={fetchDocuments} />
+          {isAdmin && <ClearDocumentsDialog onDocumentsCleared={fetchDocuments} />}
           <UploadDocumentsDialog onDocumentsUploaded={fetchDocuments} />
           <PipelineStatusDialog
             open={showPipelineStatus}

@@ -6,6 +6,8 @@ from fastapi import HTTPException, status
 from pydantic import BaseModel
 
 from .config import global_args
+import json
+import os
 
 # use the .env that is inside the current folder
 # allows to use different .env file for each lightrag instance
@@ -26,12 +28,61 @@ class AuthHandler:
         self.algorithm = global_args.jwt_algorithm
         self.expire_hours = global_args.token_expire_hours
         self.guest_expire_hours = global_args.guest_token_expire_hours
+        self.accounts_file = global_args.accounts_file
         self.accounts = {}
-        auth_accounts = global_args.auth_accounts
-        if auth_accounts:
-            for account in auth_accounts.split(","):
-                username, password = account.split(":", 1)
-                self.accounts[username] = password
+        if os.path.isfile(self.accounts_file):
+            try:
+                with open(self.accounts_file, "r", encoding="utf-8") as f:
+                    self.accounts = json.load(f)
+            except Exception:
+                self.accounts = {}
+        else:
+            auth_accounts = global_args.auth_accounts
+            if auth_accounts:
+                for i, account in enumerate(auth_accounts.split(",")):
+                    username, password = account.split(":", 1)
+                    role = "admin" if i == 0 else "user"
+                    self.accounts[username] = {
+                        "password": password,
+                        "role": role,
+                        "active": True,
+                    }
+            self._save_accounts()
+
+    def _save_accounts(self):
+        try:
+            with open(self.accounts_file, "w", encoding="utf-8") as f:
+                json.dump(self.accounts, f)
+        except Exception:
+            pass
+
+    def list_accounts(self):
+        return [
+            {"username": u, **v}
+            for u, v in self.accounts.items()
+        ]
+
+    def add_account(self, username: str, password: str, role: str = "user", active: bool = True):
+        self.accounts[username] = {"password": password, "role": role, "active": active}
+        self._save_accounts()
+
+    def update_account(self, username: str, password: str | None = None, role: str | None = None, active: bool | None = None):
+        account = self.accounts.get(username)
+        if not account:
+            raise KeyError("Account not found")
+        if password is not None:
+            account["password"] = password
+        if role is not None:
+            account["role"] = role
+        if active is not None:
+            account["active"] = active
+        self.accounts[username] = account
+        self._save_accounts()
+
+    def delete_account(self, username: str):
+        if username in self.accounts:
+            del self.accounts[username]
+            self._save_accounts()
 
     def create_token(
         self,
