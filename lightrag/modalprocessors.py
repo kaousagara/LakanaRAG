@@ -163,7 +163,7 @@ class BaseModalProcessor:
         )
 
         # Add "belongs_to" relationships for all extracted entities
-        for maybe_nodes, _ in chunk_results:
+        for maybe_nodes, _, _ in chunk_results:
             for entity_name in maybe_nodes.keys():
                 if entity_name != modal_entity_name:  # Skip self-relationship
                     # Create belongs_to relationship

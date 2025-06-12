@@ -11,6 +11,7 @@
     "knowledgeGraph": "知识图谱",
     "retrieval": "检索",
     "api": "API",
+    "accounts": "账户",
     "projectRepository": "项目仓库",
     "logout": "退出登录",
     "themeToggle": {
@@ -350,8 +351,17 @@
       "streamResponseTooltip": "如果为True，启用实时流式输出响应",
       "userPrompt": "用户提示词",
       "userPromptTooltip": "向LLM提供额外的响应要求（与查询内容无关，仅用于处理输出）。",
-      "userPromptPlaceholder": "输入自定义提示词（可选）"
+    "userPromptPlaceholder": "输入自定义提示词（可选）"
     }
+  },
+  "accountManager": {
+    "title": "账户管理",
+    "create": "创建",
+    "delete": "删除",
+    "username": "用户名",
+    "password": "密码",
+    "role": "角色",
+    "active": "启用"
   },
   "apiSite": {
     "loading": "正在加载 API 文档..."

@@ -15,6 +15,7 @@ import GraphViewer from '@/features/GraphViewer'
 import DocumentManager from '@/features/DocumentManager'
 import RetrievalTesting from '@/features/RetrievalTesting'
 import ApiSite from '@/features/ApiSite'
+import AccountManager from '@/features/AccountManager'
 
 import { Tabs, TabsContent } from '@/components/ui/Tabs'
 
@@ -22,6 +23,7 @@ function App() {
   const message = useBackendState.use.message()
   const enableHealthCheck = useSettingsStore.use.enableHealthCheck()
   const currentTab = useSettingsStore.use.currentTab()
+  const isAdmin = useAuthStore.use.isAdmin()
   const [apiKeyAlertOpen, setApiKeyAlertOpen] = useState(false)
   const [initializing, setInitializing] = useState(true) // Add initializing state
   const versionCheckRef = useRef(false); // Prevent duplicate calls in Vite dev mode
@@ -148,6 +150,12 @@ function App() {
   )
 
   useEffect(() => {
+    if (!isAdmin && ['documents', 'api', 'accounts'].includes(currentTab)) {
+      handleTabChange('knowledge-graph')
+    }
+  }, [isAdmin, currentTab, handleTabChange])
+
+  useEffect(() => {
     if (message) {
       if (message.includes(InvalidApiKeyError) || message.includes(RequireApiKeError)) {
         setApiKeyAlertOpen(true)
@@ -208,6 +216,9 @@ function App() {
                 </TabsContent>
                 <TabsContent value="api" className="absolute top-0 right-0 bottom-0 left-0 overflow-hidden">
                   <ApiSite />
+                </TabsContent>
+                <TabsContent value="accounts" className="absolute top-0 right-0 bottom-0 left-0 overflow-auto">
+                  <AccountManager />
                 </TabsContent>
               </div>
             </Tabs>
