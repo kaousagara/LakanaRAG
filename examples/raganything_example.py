@@ -11,15 +11,17 @@ This example shows how to:
 import os
 import argparse
 import asyncio
-from lightrag.llm.openai import openai_complete_if_cache, openai_embed
+from lightrag import LightRAG
+from lightrag.utils import EmbeddingFunc
+from lightrag.llm.ollama import ollama_model_complete, ollama_embed
 from lightrag.raganything import RAGAnything
 
 
 async def process_with_rag(
     file_path: str,
     output_dir: str,
-    api_key: str,
-    base_url: str = None,
+    api_key: str | None = None,
+    host: str | None = "http://localhost:11434",
     working_dir: str = None,
 ):
     """
@@ -28,73 +30,32 @@ async def process_with_rag(
     Args:
         file_path: Path to the document
         output_dir: Output directory for RAG results
-        api_key: OpenAI API key
-        base_url: Optional base URL for API
+        api_key: Optional Ollama API key
+        host: Ollama server host
     """
     try:
-        # Initialize RAGAnything
-        rag = RAGAnything(
+        # Initialize RAGAnything with Ollama backend
+        lightrag = LightRAG(
             working_dir=working_dir,
-            llm_model_func=lambda prompt,
-            system_prompt=None,
-            history_messages=[],
-            **kwargs: openai_complete_if_cache(
-                "gpt-4o-mini",
-                prompt,
-                system_prompt=system_prompt,
-                history_messages=history_messages,
-                api_key=api_key,
-                base_url=base_url,
-                **kwargs,
+            llm_model_func=ollama_model_complete,
+            llm_model_name="qwen2:7b",
+            llm_model_kwargs={"host": host, "api_key": api_key},
+            embedding_func=EmbeddingFunc(
+                embedding_dim=3072,
+                max_token_size=8192,
+                func=lambda texts: ollama_embed(
+                    texts,
+                    embed_model="bge-m3:latest",
+                    host=host,
+                    api_key=api_key,
+                ),
             ),
-            vision_model_func=lambda prompt,
-            system_prompt=None,
-            history_messages=[],
-            image_data=None,
-            **kwargs: openai_complete_if_cache(
-                "gpt-4o",
-                "",
-                system_prompt=None,
-                history_messages=[],
-                messages=[
-                    {"role": "system", "content": system_prompt}
-                    if system_prompt
-                    else None,
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{image_data}"
-                                },
-                            },
-                        ],
-                    }
-                    if image_data
-                    else {"role": "user", "content": prompt},
-                ],
-                api_key=api_key,
-                base_url=base_url,
-                **kwargs,
-            )
-            if image_data
-            else openai_complete_if_cache(
-                "gpt-4o-mini",
-                prompt,
-                system_prompt=system_prompt,
-                history_messages=history_messages,
-                api_key=api_key,
-                base_url=base_url,
-                **kwargs,
-            ),
-            embedding_func=lambda texts: openai_embed(
-                texts,
-                model="text-embedding-3-large",
-                api_key=api_key,
-                base_url=base_url,
-            ),
+        )
+
+        rag = RAGAnything(
+            lightrag=lightrag,
+            llm_model_func=ollama_model_complete,
+            vision_model_func=ollama_model_complete,
             embedding_dim=3072,
             max_token_size=8192,
         )
@@ -132,9 +93,13 @@ def main():
         "--output", "-o", default="./output", help="Output directory path"
     )
     parser.add_argument(
-        "--api-key", required=True, help="OpenAI API key for RAG processing"
+        "--api-key", help="Optional Ollama API key for RAG processing"
     )
-    parser.add_argument("--base-url", help="Optional base URL for API")
+    parser.add_argument(
+        "--host",
+        default="http://localhost:11434",
+        help="Ollama server host",
+    )
 
     args = parser.parse_args()
 
@@ -145,7 +110,11 @@ def main():
     # Process with RAG
     asyncio.run(
         process_with_rag(
-            args.file_path, args.output, args.api_key, args.base_url, args.working_dir
+            args.file_path,
+            args.output,
+            args.api_key,
+            args.host,
+            args.working_dir,
         )
     )
 
