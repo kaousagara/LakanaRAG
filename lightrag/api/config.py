@@ -291,6 +291,7 @@ def parse_args() -> argparse.Namespace:
     args.token_expire_hours = get_env_value("TOKEN_EXPIRE_HOURS", 48, int)
     args.guest_token_expire_hours = get_env_value("GUEST_TOKEN_EXPIRE_HOURS", 24, int)
     args.jwt_algorithm = get_env_value("JWT_ALGORITHM", "HS256")
+    args.accounts_file = get_env_value("ACCOUNTS_FILE", "./accounts.json")
 
     ollama_server_infos.LIGHTRAG_MODEL = args.simulated_model_name
 

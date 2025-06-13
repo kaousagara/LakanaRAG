@@ -1675,6 +1675,11 @@ def normalize_extracted_info(name: str, is_entity=False) -> str:
     return name
 
 
+def standardize_entity_name(name: str) -> str:
+    """Standardize entity names to Title Case."""
+    return " ".join(word.capitalize() for word in name.split())
+
+
 def clean_text(text: str) -> str:
     """Clean text by removing null bytes (0x00) and whitespace
 

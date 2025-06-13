@@ -844,6 +844,17 @@ class AGEStorage(BaseGraphStorage):
         )
         return result
 
+    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+        query = f"""MATCH (a:base {{entity_id: '{source_node_id}'}}), (b:base {{entity_id: '{target_node_id}'}}),
+                       p = shortestPath((a)-[*..15]-(b)) RETURN length(p) AS len"""
+        try:
+            results = await self._query(query)
+            if results and results[0] and results[0]["len"] is not None:
+                return int(results[0]["len"])
+        except Exception:
+            pass
+        return -1
+
     async def index_done_callback(self) -> None:
         # AGES handles persistence automatically
         pass

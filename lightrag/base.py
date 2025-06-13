@@ -536,6 +536,10 @@ class BaseGraphStorage(StorageNameSpace, ABC):
             indicating whether the graph was truncated due to max_nodes limit
         """
 
+    @abstractmethod
+    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+        """Return the shortest path length between two nodes. -1 if no path."""
+
 
 class DocStatus(str, Enum):
     """Document processing status"""

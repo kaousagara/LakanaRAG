@@ -645,3 +645,25 @@ export const checkEntityNameExists = async (entityName: string): Promise<boolean
     return false
   }
 }
+
+export type Account = { username: string; role: string; active: boolean }
+
+export const getAccounts = async (): Promise<Account[]> => {
+  const response = await axiosInstance.get('/accounts')
+  return response.data.accounts
+}
+
+export const createAccount = async (account: { username: string; password: string; role: string; active: boolean }): Promise<DocActionResponse> => {
+  const response = await axiosInstance.post('/accounts', account)
+  return response.data
+}
+
+export const updateAccount = async (username: string, data: { password?: string; role?: string; active?: boolean }): Promise<DocActionResponse> => {
+  const response = await axiosInstance.put(`/accounts/${encodeURIComponent(username)}`, data)
+  return response.data
+}
+
+export const deleteAccount = async (username: string): Promise<DocActionResponse> => {
+  const response = await axiosInstance.delete(`/accounts/${encodeURIComponent(username)}`)
+  return response.data
+}
