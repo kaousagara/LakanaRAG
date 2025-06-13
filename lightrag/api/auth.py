@@ -62,11 +62,27 @@ class AuthHandler:
             for u, v in self.accounts.items()
         ]
 
-    def add_account(self, username: str, password: str, role: str = "user", active: bool = True):
-        self.accounts[username] = {"password": password, "role": role, "active": active}
+    def add_account(
+        self,
+        username: str,
+        password: str,
+        role: str = "user",
+        active: bool = True,
+    ):
+        self.accounts[username] = {
+            "password": password,
+            "role": role,
+            "active": active,
+        }
         self._save_accounts()
 
-    def update_account(self, username: str, password: str | None = None, role: str | None = None, active: bool | None = None):
+    def update_account(
+        self,
+        username: str,
+        password: str | None = None,
+        role: str | None = None,
+        active: bool | None = None,
+    ):
         account = self.accounts.get(username)
         if not account:
             raise KeyError("Account not found")
@@ -97,7 +113,8 @@ class AuthHandler:
         Args:
             username: Username
             role: User role, default is "user", guest is "guest"
-            custom_expire_hours: Custom expiration time (hours), if None use default value
+            custom_expire_hours: Custom expiration time (hours),
+            if None use default value
             metadata: Additional metadata
 
         Returns:
@@ -116,10 +133,17 @@ class AuthHandler:
 
         # Create payload
         payload = TokenPayload(
-            sub=username, exp=expire, role=role, metadata=metadata or {}
+            sub=username,
+            exp=expire,
+            role=role,
+            metadata=metadata or {},
         )
 
-        return jwt.encode(payload.dict(), self.secret, algorithm=self.algorithm)
+        return jwt.encode(
+            payload.dict(),
+            self.secret,
+            algorithm=self.algorithm,
+        )
 
     def validate_token(self, token: str) -> dict:
         """
@@ -135,13 +159,18 @@ class AuthHandler:
             HTTPException: If token is invalid or expired
         """
         try:
-            payload = jwt.decode(token, self.secret, algorithms=[self.algorithm])
+            payload = jwt.decode(
+                token,
+                self.secret,
+                algorithms=[self.algorithm],
+            )
             expire_timestamp = payload["exp"]
             expire_time = datetime.utcfromtimestamp(expire_timestamp)
 
             if datetime.utcnow() > expire_time:
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token expired",
                 )
 
             # Return complete payload instead of just username
@@ -153,7 +182,8 @@ class AuthHandler:
             }
         except jwt.PyJWTError:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
             )
 
 

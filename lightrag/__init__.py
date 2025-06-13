@@ -1,4 +1,6 @@
-from .lightrag import LightRAG as LightRAG, QueryParam as QueryParam
+from .lightrag import LightRAG, QueryParam  # noqa: F401
+
+__all__ = ["LightRAG", "QueryParam"]
 
 __version__ = "1.3.8"
 __author__ = "Zirui Guo"
