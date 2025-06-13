@@ -1112,8 +1112,12 @@ class PGGraphQueryException(Exception):
 
     def __init__(self, exception: Union[str, dict[str, Any]]) -> None:
         if isinstance(exception, dict):
-            self.message = exception["message"] if "message" in exception else "unknown"
-            self.details = exception["details"] if "details" in exception else "unknown"
+            self.message = exception.get("message", "unknown")
+            # Support both "details" and legacy "detail" keys
+            if "details" in exception:
+                self.details = exception["details"]
+            else:
+                self.details = exception.get("detail", "unknown")
         else:
             self.message = exception
             self.details = "unknown"
@@ -1323,7 +1327,7 @@ class PGGraphStorage(BaseGraphStorage):
                 {
                     "message": f"Error executing graph query: {query}",
                     "wrapped": query,
-                    "detail": str(e),
+                    "details": str(e),
                 }
             ) from e
 
@@ -2317,8 +2321,8 @@ class PGGraphStorage(BaseGraphStorage):
     async def shortest_path_length(
         self, source_node_id: str, target_node_id: str
     ) -> int:
-        src_label = self._normalize_node_id(source_node_id)
-        tgt_label = self._normalize_node_id(target_node_id)
+        src_label = self._normalize_node_id(source_node_id).replace("'", "''")
+        tgt_label = self._normalize_node_id(target_node_id).replace("'", "''")
         query = f"""SELECT * FROM cypher('{self.graph_name}', $$
                     MATCH (a:base {{entity_id: '{src_label}'}}),
                           (b:base {{entity_id: '{tgt_label}'}}),
@@ -2331,7 +2335,8 @@ class PGGraphStorage(BaseGraphStorage):
                 return int(record[0]["len"])
         except PGGraphQueryException as e:
             logger.warning(
-                f"AGE shortestPath not available, falling back to BFS: {e.detail}"
+                "AGE shortestPath not available, falling back to BFS: %s",
+                e.get_details(),
             )
 
         return await self._bfs_shortest_path_length(source_node_id, target_node_id)
