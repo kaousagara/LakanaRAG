@@ -1341,7 +1341,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                      MATCH (n:base {entity_id: "%s"})
                      RETURN count(n) > 0 AS node_exists
-                   $$) AS (node_exists bool)""" % (self.graph_name, entity_name_label)
+                   $$) AS (node_exists bool)""" % (
+            self.graph_name,
+            entity_name_label,
+        )
 
         single_result = (await self._query(query))[0]
 
@@ -1371,7 +1374,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                      MATCH (n:base {entity_id: "%s"})
                      RETURN n
-                   $$) AS (n agtype)""" % (self.graph_name, label)
+                   $$) AS (n agtype)""" % (
+            self.graph_name,
+            label,
+        )
         record = await self._query(query)
         if record:
             node = record[0]
@@ -1395,7 +1401,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                      MATCH (n:base {entity_id: "%s"})-[r]-()
                      RETURN count(r) AS total_edge_count
-                   $$) AS (total_edge_count integer)""" % (self.graph_name, label)
+                   $$) AS (total_edge_count integer)""" % (
+            self.graph_name,
+            label,
+        )
         record = (await self._query(query))[0]
         if record:
             edge_count = int(record["total_edge_count"])
@@ -1567,7 +1576,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                      MATCH (n:base {entity_id: "%s"})
                      DETACH DELETE n
-                   $$) AS (n agtype)""" % (self.graph_name, label)
+                   $$) AS (n agtype)""" % (
+            self.graph_name,
+            label,
+        )
 
         try:
             await self._query(query, readonly=False)
@@ -1589,7 +1601,10 @@ class PGGraphStorage(BaseGraphStorage):
                      MATCH (n:base)
                      WHERE n.entity_id IN [%s]
                      DETACH DELETE n
-                   $$) AS (n agtype)""" % (self.graph_name, node_id_list)
+                   $$) AS (n agtype)""" % (
+            self.graph_name,
+            node_id_list,
+        )
 
         try:
             await self._query(query, readonly=False)
@@ -1611,7 +1626,11 @@ class PGGraphStorage(BaseGraphStorage):
             query = """SELECT * FROM cypher('%s', $$
                          MATCH (a:base {entity_id: "%s"})-[r]-(b:base {entity_id: "%s"})
                          DELETE r
-                       $$) AS (r agtype)""" % (self.graph_name, src_label, tgt_label)
+                       $$) AS (r agtype)""" % (
+                self.graph_name,
+                src_label,
+                tgt_label,
+            )
 
             try:
                 await self._query(query, readonly=False)
@@ -1642,7 +1661,10 @@ class PGGraphStorage(BaseGraphStorage):
                      UNWIND [%s] AS node_id
                      MATCH (n:base {entity_id: node_id})
                      RETURN node_id, n
-                   $$) AS (node_id text, n agtype)""" % (self.graph_name, formatted_ids)
+                   $$) AS (node_id text, n agtype)""" % (
+            self.graph_name,
+            formatted_ids,
+        )
 
         results = await self._query(query)
 
@@ -1962,7 +1984,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                     MATCH (n:base {entity_id: "%s"})
                     RETURN id(n) as node_id, n
-                  $$) AS (node_id bigint, n agtype)""" % (self.graph_name, label)
+                  $$) AS (node_id bigint, n agtype)""" % (
+            self.graph_name,
+            label,
+        )
 
         node_result = await self._query(query)
         if not node_result or not node_result[0].get("n"):
@@ -2142,6 +2167,34 @@ class PGGraphStorage(BaseGraphStorage):
 
         return result
 
+    async def _bfs_shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
+        """Fallback BFS implementation for shortest path length"""
+        if source_node_id == target_node_id:
+            return 0
+
+        visited = {source_node_id}
+        frontier = [(source_node_id, 0)]
+        MAX_DEPTH = 15
+
+        while frontier:
+            current, depth = frontier.pop(0)
+            if depth >= MAX_DEPTH:
+                continue
+            edges = await self.get_node_edges(current)
+            if not edges:
+                continue
+            for src, tgt in edges:
+                neighbor = tgt if src == current else src
+                if neighbor == target_node_id:
+                    return depth + 1
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    frontier.append((neighbor, depth + 1))
+
+        return -1
+
     async def get_knowledge_graph(
         self,
         node_label: str,
@@ -2261,7 +2314,9 @@ class PGGraphStorage(BaseGraphStorage):
 
         return kg
 
-    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+    async def shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
         src_label = self._normalize_node_id(source_node_id)
         tgt_label = self._normalize_node_id(target_node_id)
         query = f"""SELECT * FROM cypher('{self.graph_name}', $$
@@ -2270,10 +2325,16 @@ class PGGraphStorage(BaseGraphStorage):
                           p = shortestPath((a)-[*..15]-(b))
                     RETURN length(p) AS len
                 $$) AS (len integer)"""
-        record = await self._query(query)
-        if record and record[0] and record[0]["len"] is not None:
-            return int(record[0]["len"])
-        return -1
+        try:
+            record = await self._query(query)
+            if record and record[0] and record[0]["len"] is not None:
+                return int(record[0]["len"])
+        except PGGraphQueryException as e:
+            logger.warning(
+                f"AGE shortestPath not available, falling back to BFS: {e.detail}"
+            )
+
+        return await self._bfs_shortest_path_length(source_node_id, target_node_id)
 
     async def drop(self) -> dict[str, str]:
         """Drop the storage"""
