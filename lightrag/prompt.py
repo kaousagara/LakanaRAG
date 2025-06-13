@@ -24,7 +24,8 @@ Utilisez {language} comme langue de sortie.
 - entity_type: l'un des types suivants : [{entity_types}]
 - entity_description: description complète des attributs et des activités de l'entité
 - additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
-Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>)
+- entity_community: Domaine dans lequel evolue l'entite (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precise, ecrire "inconnue".
+Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)
 
 2. À partir des entités identifiées à l'étape 1, identifiez toutes les paires (source_entity, target_entity) qui sont *clairement liées* les unes aux autres.
 Pour chaque paire d'entités liées, extrayez les informations suivantes:
@@ -83,11 +84,11 @@ It was a small transformation, barely perceptible, but one that Alex noted with 
 ```
 
 Output:
-("entity"{tuple_delimiter}"Alex"{tuple_delimiter}"person"{tuple_delimiter}"Alex is a character who experiences frustration and is observant of the dynamics among other characters."{tuple_delimiter}"emotion: frustration"){record_delimiter}
-("entity"{tuple_delimiter}"Taylor"{tuple_delimiter}"person"{tuple_delimiter}"Taylor is portrayed with authoritarian certainty and shows a moment of reverence towards a device, indicating a change in perspective."{tuple_delimiter}"attitude: authoritarian"){record_delimiter}
-("entity"{tuple_delimiter}"Jordan"{tuple_delimiter}"person"{tuple_delimiter}"Jordan shares a commitment to discovery and has a significant interaction with Taylor regarding a device."{tuple_delimiter}"motivation: discovery"){record_delimiter}
-("entity"{tuple_delimiter}"Cruz"{tuple_delimiter}"person"{tuple_delimiter}"Cruz is associated with a vision of control and order, influencing the dynamics among other characters."{tuple_delimiter}"trait: controlling"){record_delimiter}
-("entity"{tuple_delimiter}"The Device"{tuple_delimiter}"technology"{tuple_delimiter}"The Device is central to the story, with potential game-changing implications, and is revered by Taylor."{tuple_delimiter}"importance: high"){record_delimiter}
+("entity"{tuple_delimiter}"Alex"{tuple_delimiter}"person"{tuple_delimiter}"Alex is a character who experiences frustration and is observant of the dynamics among other characters."{tuple_delimiter}"emotion: frustration"{tuple_delimiter}"inconnue"){record_delimiter}
+("entity"{tuple_delimiter}"Taylor"{tuple_delimiter}"person"{tuple_delimiter}"Taylor is portrayed with authoritarian certainty and shows a moment of reverence towards a device, indicating a change in perspective."{tuple_delimiter}"attitude: authoritarian"{tuple_delimiter}"inconnue"){record_delimiter}
+("entity"{tuple_delimiter}"Jordan"{tuple_delimiter}"person"{tuple_delimiter}"Jordan shares a commitment to discovery and has a significant interaction with Taylor regarding a device."{tuple_delimiter}"motivation: discovery"{tuple_delimiter}"inconnue"){record_delimiter}
+("entity"{tuple_delimiter}"Cruz"{tuple_delimiter}"person"{tuple_delimiter}"Cruz is associated with a vision of control and order, influencing the dynamics among other characters."{tuple_delimiter}"trait: controlling"{tuple_delimiter}"inconnue"){record_delimiter}
+("entity"{tuple_delimiter}"The Device"{tuple_delimiter}"technology"{tuple_delimiter}"The Device is central to the story, with potential game-changing implications, and is revered by Taylor."{tuple_delimiter}"importance: high"{tuple_delimiter}"inconnue"){record_delimiter}
 ("relationship"{tuple_delimiter}"Alex"{tuple_delimiter}"Taylor"{tuple_delimiter}"Alex is affected by Taylor's authoritarian certainty and observes changes in Taylor's attitude towards the device."{tuple_delimiter}"power dynamics, perspective shift"{tuple_delimiter}7){record_delimiter}
 ("relationship"{tuple_delimiter}"Alex"{tuple_delimiter}"Jordan"{tuple_delimiter}"Alex and Jordan share a commitment to discovery, which contrasts with Cruz's vision."{tuple_delimiter}"shared goals, rebellion"{tuple_delimiter}6){record_delimiter}
 ("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"Jordan"{tuple_delimiter}"Taylor and Jordan interact directly regarding the device, leading to a moment of mutual respect and an uneasy truce."{tuple_delimiter}"conflict resolution, mutual respect"{tuple_delimiter}8){record_delimiter}
@@ -111,13 +112,13 @@ Financial experts are closely watching the Federal Reserve's next move, as specu
 ```
 
 Output:
-("entity"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"index"{tuple_delimiter}"The Global Tech Index tracks the performance of major technology stocks and experienced a 3.4% decline today."{tuple_delimiter}"trend: decline"){record_delimiter}
-("entity"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"company"{tuple_delimiter}"Nexon Technologies is a tech company that saw its stock decline by 7.8% after disappointing earnings."{tuple_delimiter}"performance: poor"){record_delimiter}
-("entity"{tuple_delimiter}"Omega Energy"{tuple_delimiter}"company"{tuple_delimiter}"Omega Energy is an energy company that gained 2.1% in stock value due to rising oil prices."{tuple_delimiter}"performance: gain"){record_delimiter}
-("entity"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"commodity"{tuple_delimiter}"Gold futures rose by 1.5%, indicating increased investor interest in safe-haven assets."{tuple_delimiter}"investor sentiment: safe haven"){record_delimiter}
-("entity"{tuple_delimiter}"Crude Oil"{tuple_delimiter}"commodity"{tuple_delimiter}"Crude oil prices rose to $87.60 per barrel due to supply constraints and strong demand."{tuple_delimiter}"demand: strong"){record_delimiter}
-("entity"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"market_trend"{tuple_delimiter}"Market selloff refers to the significant decline in stock values due to investor concerns over interest rates and regulations."{tuple_delimiter}"cause: investor concern"){record_delimiter}
-("entity"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"economic_policy"{tuple_delimiter}"The Federal Reserve's upcoming policy announcement is expected to impact investor confidence and market stability."{tuple_delimiter}"policy impact: anticipated"){record_delimiter}
+("entity"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"index"{tuple_delimiter}"The Global Tech Index tracks the performance of major technology stocks and experienced a 3.4% decline today."{tuple_delimiter}"trend: decline"{tuple_delimiter}"Economie"){record_delimiter}
+("entity"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"company"{tuple_delimiter}"Nexon Technologies is a tech company that saw its stock decline by 7.8% after disappointing earnings."{tuple_delimiter}"performance: poor"{tuple_delimiter}"Economie"){record_delimiter}
+("entity"{tuple_delimiter}"Omega Energy"{tuple_delimiter}"company"{tuple_delimiter}"Omega Energy is an energy company that gained 2.1% in stock value due to rising oil prices."{tuple_delimiter}"performance: gain"{tuple_delimiter}"Economie"){record_delimiter}
+("entity"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"commodity"{tuple_delimiter}"Gold futures rose by 1.5%, indicating increased investor interest in safe-haven assets."{tuple_delimiter}"investor sentiment: safe haven"{tuple_delimiter}"Economie"){record_delimiter}
+("entity"{tuple_delimiter}"Crude Oil"{tuple_delimiter}"commodity"{tuple_delimiter}"Crude oil prices rose to $87.60 per barrel due to supply constraints and strong demand."{tuple_delimiter}"demand: strong"{tuple_delimiter}"Economie"){record_delimiter}
+("entity"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"market_trend"{tuple_delimiter}"Market selloff refers to the significant decline in stock values due to investor concerns over interest rates and regulations."{tuple_delimiter}"cause: investor concern"{tuple_delimiter}"Economie"){record_delimiter}
+("entity"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"economic_policy"{tuple_delimiter}"The Federal Reserve's upcoming policy announcement is expected to impact investor confidence and market stability."{tuple_delimiter}"policy impact: anticipated"{tuple_delimiter}"Economie"){record_delimiter}
 ("relationship"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"The decline in the Global Tech Index is part of the broader market selloff driven by investor concerns."{tuple_delimiter}"market performance, investor sentiment"{tuple_delimiter}9){record_delimiter}
 ("relationship"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Nexon Technologies' stock decline contributed to the overall drop in the Global Tech Index."{tuple_delimiter}"company impact, index movement"{tuple_delimiter}8){record_delimiter}
 ("relationship"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"Gold prices rose as investors sought safe-haven assets during the market selloff."{tuple_delimiter}"market reaction, safe-haven investment"{tuple_delimiter}10){record_delimiter}
@@ -134,12 +135,12 @@ At the World Athletics Championship in Tokyo, Noah Carter broke the 100m sprint 
 ```
 
 Output:
-("entity"{tuple_delimiter}"World Athletics Championship"{tuple_delimiter}"event"{tuple_delimiter}"The World Athletics Championship is a global sports competition featuring top athletes in track and field."{tuple_delimiter}"scale: global"){record_delimiter}
-("entity"{tuple_delimiter}"Tokyo"{tuple_delimiter}"location"{tuple_delimiter}"Tokyo is the host city of the World Athletics Championship."{tuple_delimiter}"role: host city"){record_delimiter}
-("entity"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"athlete"{tuple_delimiter}"Noah Carter is a sprinter who set a new record in the 100m sprint at the World Athletics Championship."{tuple_delimiter}"achievement: record breaker"){record_delimiter}
-("entity"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"record"{tuple_delimiter}"The 100m sprint record is a benchmark in athletics, recently broken by Noah Carter."{tuple_delimiter}"status: new best"){record_delimiter}
-("entity"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"equipment"{tuple_delimiter}"Carbon-fiber spikes are advanced sprinting shoes that provide enhanced speed and traction."{tuple_delimiter}"technology: advanced"){record_delimiter}
-("entity"{tuple_delimiter}"World Athletics Federation"{tuple_delimiter}"organization"{tuple_delimiter}"The World Athletics Federation is the governing body overseeing the World Athletics Championship and record validations."{tuple_delimiter}"role: governing body"){record_delimiter}
+("entity"{tuple_delimiter}"World Athletics Championship"{tuple_delimiter}"event"{tuple_delimiter}"The World Athletics Championship is a global sports competition featuring top athletes in track and field."{tuple_delimiter}"scale: global"{tuple_delimiter}"Sport"){record_delimiter}
+("entity"{tuple_delimiter}"Tokyo"{tuple_delimiter}"location"{tuple_delimiter}"Tokyo is the host city of the World Athletics Championship."{tuple_delimiter}"role: host city"{tuple_delimiter}"Sport"){record_delimiter}
+("entity"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"athlete"{tuple_delimiter}"Noah Carter is a sprinter who set a new record in the 100m sprint at the World Athletics Championship."{tuple_delimiter}"achievement: record breaker"{tuple_delimiter}"Sport"){record_delimiter}
+("entity"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"record"{tuple_delimiter}"The 100m sprint record is a benchmark in athletics, recently broken by Noah Carter."{tuple_delimiter}"status: new best"{tuple_delimiter}"Sport"){record_delimiter}
+("entity"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"equipment"{tuple_delimiter}"Carbon-fiber spikes are advanced sprinting shoes that provide enhanced speed and traction."{tuple_delimiter}"technology: advanced"{tuple_delimiter}"Sport"){record_delimiter}
+("entity"{tuple_delimiter}"World Athletics Federation"{tuple_delimiter}"organization"{tuple_delimiter}"The World Athletics Federation is the governing body overseeing the World Athletics Championship and record validations."{tuple_delimiter}"role: governing body"{tuple_delimiter}"Sport"){record_delimiter}
 ("relationship"{tuple_delimiter}"World Athletics Championship"{tuple_delimiter}"Tokyo"{tuple_delimiter}"The World Athletics Championship is being hosted in Tokyo."{tuple_delimiter}"event location, international competition"{tuple_delimiter}8){record_delimiter}
 ("relationship"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"Noah Carter set a new 100m sprint record at the championship."{tuple_delimiter}"athlete achievement, record-breaking"{tuple_delimiter}10){record_delimiter}
 ("relationship"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"Noah Carter used carbon-fiber spikes to enhance performance during the race."{tuple_delimiter}"athletic equipment, performance boost"{tuple_delimiter}7){record_delimiter}
@@ -180,7 +181,8 @@ Utilisez {language} comme langue de sortie.
 - entity_type: l'un des types suivants : [{entity_types}]
 - entity_description: description complète des attributs et des activités de l'entité
 - additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
-Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>)
+- entity_community: Domaine dans lequel evolue l'entite (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precise, ecrire "inconnue".
+Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)
 
 2. À partir des entités identifiées à l'étape 1, identifiez toutes les paires (source_entity, target_entity) qui sont *clairement liées* les unes aux autres.
 Pour chaque paire d'entités liées, extrayez les informations suivantes:
@@ -275,11 +277,10 @@ Compte tenu de l'historique des requêtes et des conversations, répertoriez les
 
 - Consider both the current query and relevant conversation history when extracting keywords
 - Output the keywords in JSON format, it will be parsed by a JSON parser, do not add any extra content in output
-- The JSON should have two keys:
+- The JSON should have three keys:
   - "high_level_keywords" for overarching concepts or themes
   - "low_level_keywords" for specific entities or details
-
-######################
+  - "Community" for specific community
 ---Examples---
 ######################
 {examples}
@@ -305,7 +306,8 @@ Query: "How does international trade influence global economic stability?"
 Output:
 {
   "high_level_keywords": ["International trade", "Global economic stability", "Economic impact"],
-  "low_level_keywords": ["Trade agreements", "Tariffs", "Currency exchange", "Imports", "Exports"]
+  "low_level_keywords": ["Trade agreements", "Tariffs", "Currency exchange", "Imports", "Exports"],
+  "Community": "Economie"
 }
 #############################""",
     """Example 2:
@@ -315,7 +317,8 @@ Query: "What are the environmental consequences of deforestation on biodiversity
 Output:
 {
   "high_level_keywords": ["Environmental consequences", "Deforestation", "Biodiversity loss"],
-  "low_level_keywords": ["Species extinction", "Habitat destruction", "Carbon emissions", "Rainforest", "Ecosystem"]
+  "low_level_keywords": ["Species extinction", "Habitat destruction", "Carbon emissions", "Rainforest", "Ecosystem"],
+  "Community": "Environnement"
 }
 #############################""",
     """Example 3:
@@ -325,7 +328,8 @@ Query: "What is the role of education in reducing poverty?"
 Output:
 {
   "high_level_keywords": ["Education", "Poverty reduction", "Socioeconomic development"],
-  "low_level_keywords": ["School access", "Literacy rates", "Job training", "Income inequality"]
+  "low_level_keywords": ["School access", "Literacy rates", "Job training", "Income inequality"],
+  "Community": "Sociologie"
 }
 #############################""",
 ]

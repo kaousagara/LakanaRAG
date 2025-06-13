@@ -156,7 +156,7 @@ async def _handle_single_entity_extraction(
     chunk_key: str,
     file_path: str = "unknown_source",
 ):
-    if len(record_attributes) < 5 or '"entity"' not in record_attributes[0]:
+    if len(record_attributes) < 6 or '"entity"' not in record_attributes[0]:
         return None
 
     # Clean and validate entity name
@@ -187,6 +187,10 @@ async def _handle_single_entity_extraction(
         clean_str(record_attributes[4])
     )
 
+    entity_community = normalize_extracted_info(
+        clean_str(record_attributes[5])
+    ) or "inconnue"
+
     if not entity_description.strip():
         logger.warning(
             f"Entity extraction error: empty description for entity '{entity_name}' of type '{entity_type}'"
@@ -198,6 +202,7 @@ async def _handle_single_entity_extraction(
         entity_type=entity_type,
         description=entity_description,
         additional_properties=additional_properties,
+        entity_community=entity_community,
         source_id=chunk_key,
         file_path=file_path,
     )
@@ -295,6 +300,8 @@ async def _merge_nodes_then_upsert(
     already_source_ids = []
     already_description = []
     already_file_paths = []
+    already_additional_properties = []
+    already_entity_communities = []
 
     already_node = await knowledge_graph_inst.get_node(entity_name)
     if already_node:
@@ -306,6 +313,10 @@ async def _merge_nodes_then_upsert(
             split_string_by_multi_markers(already_node["file_path"], [GRAPH_FIELD_SEP])
         )
         already_description.append(already_node["description"])
+        if "additional_properties" in already_node:
+            already_additional_properties.append(already_node["additional_properties"])
+        if "entity_community" in already_node:
+            already_entity_communities.append(already_node["entity_community"])
 
     entity_type = sorted(
         Counter(
@@ -322,6 +333,17 @@ async def _merge_nodes_then_upsert(
     )
     file_path = GRAPH_FIELD_SEP.join(
         set([dp["file_path"] for dp in nodes_data] + already_file_paths)
+    )
+
+    additional_properties = GRAPH_FIELD_SEP.join(
+        sorted(
+            set([dp.get("additional_properties", "") for dp in nodes_data] + already_additional_properties)
+        )
+    )
+    entity_community = GRAPH_FIELD_SEP.join(
+        sorted(
+            set([dp.get("entity_community", "inconnue") for dp in nodes_data] + already_entity_communities)
+        )
     )
 
     force_llm_summary_on_merge = global_config["force_llm_summary_on_merge"]
@@ -357,6 +379,8 @@ async def _merge_nodes_then_upsert(
         entity_id=entity_name,
         entity_type=entity_type,
         description=description,
+        additional_properties=additional_properties,
+        entity_community=entity_community,
         source_id=source_id,
         file_path=file_path,
         created_at=int(time.time()),
@@ -731,7 +755,7 @@ async def merge_nodes_and_edges(
                 compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
                     "entity_name": dp["entity_name"],
                     "entity_type": dp.get("entity_type", "UNKNOWN"),
-                    "content": f"{dp['entity_name']}\n{dp['description']}",
+                    "content": f"{dp['entity_name']}\n{dp['description']}\n{dp.get('additional_properties','')}\n{dp.get('entity_community','')}",
                     "source_id": dp.get("source_id"),
                     "file_path": dp.get("file_path", "unknown_source"),
                 }
@@ -1021,7 +1045,7 @@ async def kg_query(
     if cached_response is not None:
         return cached_response
 
-    hl_keywords, ll_keywords = await get_keywords_from_query(
+    hl_keywords, ll_keywords, community = await get_keywords_from_query(
         query, query_param, global_config, hashing_kv
     )
 
@@ -1047,11 +1071,13 @@ async def kg_query(
 
     ll_keywords_str = ", ".join(ll_keywords) if ll_keywords else ""
     hl_keywords_str = ", ".join(hl_keywords) if hl_keywords else ""
+    community_str = community if community else ""
 
     # Build context
     context = await _build_query_context(
         ll_keywords_str,
         hl_keywords_str,
+        community_str,
         knowledge_graph_inst,
         entities_vdb,
         relationships_vdb,
@@ -1133,7 +1159,7 @@ async def get_keywords_from_query(
     query_param: QueryParam,
     global_config: dict[str, str],
     hashing_kv: BaseKVStorage | None = None,
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[str], list[str], str]:
     """
     Retrieves high-level and low-level keywords for RAG operations.
 
@@ -1151,13 +1177,13 @@ async def get_keywords_from_query(
     """
     # Check if pre-defined keywords are already provided
     if query_param.hl_keywords or query_param.ll_keywords:
-        return query_param.hl_keywords, query_param.ll_keywords
+        return query_param.hl_keywords, query_param.ll_keywords, ""
 
     # Extract keywords using extract_keywords_only function which already supports conversation history
-    hl_keywords, ll_keywords = await extract_keywords_only(
+    hl_keywords, ll_keywords, community = await extract_keywords_only(
         query, query_param, global_config, hashing_kv
     )
-    return hl_keywords, ll_keywords
+    return hl_keywords, ll_keywords, community
 
 
 async def extract_keywords_only(
@@ -1165,7 +1191,7 @@ async def extract_keywords_only(
     param: QueryParam,
     global_config: dict[str, str],
     hashing_kv: BaseKVStorage | None = None,
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[str], list[str], str]:
     """
     Extract high-level and low-level keywords from the given 'text' using the LLM.
     This method does NOT build the final RAG context or provide a final answer.
@@ -1180,9 +1206,11 @@ async def extract_keywords_only(
     if cached_response is not None:
         try:
             keywords_data = json.loads(cached_response)
-            return keywords_data["high_level_keywords"], keywords_data[
-                "low_level_keywords"
-            ]
+            return (
+                keywords_data.get("high_level_keywords", []),
+                keywords_data.get("low_level_keywords", []),
+                keywords_data.get("Community", ""),
+            )
         except (json.JSONDecodeError, KeyError):
             logger.warning(
                 "Invalid cache format for keywords, proceeding with extraction"
@@ -1239,12 +1267,14 @@ async def extract_keywords_only(
 
     hl_keywords = keywords_data.get("high_level_keywords", [])
     ll_keywords = keywords_data.get("low_level_keywords", [])
+    community = keywords_data.get("Community", "")
 
     # 7. Cache only the processed keywords with cache type
-    if hl_keywords or ll_keywords:
+    if hl_keywords or ll_keywords or community:
         cache_data = {
             "high_level_keywords": hl_keywords,
             "low_level_keywords": ll_keywords,
+            "Community": community,
         }
         if hashing_kv.global_config.get("enable_llm_cache"):
             await save_to_cache(
@@ -1261,7 +1291,7 @@ async def extract_keywords_only(
                 ),
             )
 
-    return hl_keywords, ll_keywords
+    return hl_keywords, ll_keywords, community
 
 
 async def _get_vector_context(
@@ -1348,6 +1378,7 @@ async def _get_vector_context(
 async def _build_query_context(
     ll_keywords: str,
     hl_keywords: str,
+    community: str,
     knowledge_graph_inst: BaseGraphStorage,
     entities_vdb: BaseVectorStorage,
     relationships_vdb: BaseVectorStorage,
@@ -1360,7 +1391,7 @@ async def _build_query_context(
     # Handle local and global modes as before
     if query_param.mode == "local":
         entities_context, relations_context, text_units_context = await _get_node_data(
-            ll_keywords,
+            f"{ll_keywords} {community}".strip(),
             knowledge_graph_inst,
             entities_vdb,
             text_chunks_db,
@@ -1368,7 +1399,7 @@ async def _build_query_context(
         )
     elif query_param.mode == "global":
         entities_context, relations_context, text_units_context = await _get_edge_data(
-            hl_keywords,
+            f"{hl_keywords} {community}".strip(),
             knowledge_graph_inst,
             relationships_vdb,
             text_chunks_db,
@@ -1376,14 +1407,14 @@ async def _build_query_context(
         )
     else:  # hybrid or mix mode
         ll_data = await _get_node_data(
-            ll_keywords,
+            f"{ll_keywords} {community}".strip(),
             knowledge_graph_inst,
             entities_vdb,
             text_chunks_db,
             query_param,
         )
         hl_data = await _get_edge_data(
-            hl_keywords,
+            f"{hl_keywords} {community}".strip(),
             knowledge_graph_inst,
             relationships_vdb,
             text_chunks_db,
@@ -2200,6 +2231,7 @@ async def kg_query_with_keywords(
     hashing_kv: BaseKVStorage | None = None,
     ll_keywords: list[str] = [],
     hl_keywords: list[str] = [],
+    community: str = "",
     chunks_vdb: BaseVectorStorage | None = None,
 ) -> str | AsyncIterator[str]:
     """
@@ -2236,10 +2268,12 @@ async def kg_query_with_keywords(
 
     ll_keywords_str = ", ".join(ll_keywords) if ll_keywords else ""
     hl_keywords_str = ", ".join(hl_keywords) if hl_keywords else ""
+    community_str = community if community else ""
 
     context = await _build_query_context(
         ll_keywords_str,
         hl_keywords_str,
+        community_str,
         knowledge_graph_inst,
         entities_vdb,
         relationships_vdb,
@@ -2347,7 +2381,7 @@ async def query_with_keywords(
         Query response or async iterator
     """
     # Extract keywords
-    hl_keywords, ll_keywords = await get_keywords_from_query(
+    hl_keywords, ll_keywords, community = await get_keywords_from_query(
         query=query,
         query_param=param,
         global_config=global_config,
@@ -2355,7 +2389,7 @@ async def query_with_keywords(
     )
 
     # Create a new string with the prompt and the keywords
-    keywords_str = ", ".join(ll_keywords + hl_keywords)
+    keywords_str = ", ".join(ll_keywords + hl_keywords + ([community] if community else []))
     formatted_question = (
         f"{prompt}\n\n### Keywords\n\n{keywords_str}\n\n### Query\n\n{query}"
     )
@@ -2375,6 +2409,7 @@ async def query_with_keywords(
             hashing_kv=hashing_kv,
             hl_keywords=hl_keywords,
             ll_keywords=ll_keywords,
+            community=community,
             chunks_vdb=chunks_vdb,
         )
     elif param.mode == "naive":
