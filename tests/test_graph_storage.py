@@ -11,8 +11,17 @@
 - PGGraphStorage
 """
 
-import asyncio
 import os
+import pytest
+
+# Skip this module when running in non-interactive CI environments. The tests
+# require optional backend services and user input.
+if not os.getenv("RUN_INTERACTIVE_TESTS"):
+    pytest.skip(
+        "Skipping interactive graph storage tests in CI", allow_module_level=True
+    )
+
+import asyncio
 import sys
 import importlib
 import numpy as np
