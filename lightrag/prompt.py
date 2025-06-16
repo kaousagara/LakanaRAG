@@ -10,7 +10,13 @@ PROMPTS["DEFAULT_TUPLE_DELIMITER"] = "<|>"
 PROMPTS["DEFAULT_RECORD_DELIMITER"] = "##"
 PROMPTS["DEFAULT_COMPLETION_DELIMITER"] = "<|COMPLETE|>"
 
-PROMPTS["DEFAULT_ENTITY_TYPES"] = ["organisation", "personne", "géographie", "événement", "catégorie"]
+PROMPTS["DEFAULT_ENTITY_TYPES"] = [
+    "organisation",
+    "personne",
+    "géographie",
+    "événement",
+    "catégorie",
+]
 
 PROMPTS["DEFAULT_USER_PROMPT"] = "n/a"
 
@@ -22,7 +28,7 @@ Utilisez {language} comme langue de sortie.
 1. Identifiez toutes les entités. Pour chaque entité identifiée, extrayez les informations suivantes:
 - entity_name: nom de l'entité, utilisez la même langue que le texte saisi. Si le nom est en anglais, mettez une majuscule.
 - entity_type: l'un des types suivants : [{entity_types}]
-- entity_description: description complète des attributs et des activités de l'entité
+- entity_description: description complète des attributs et des activités de l'entité. Si une **information temporelle** (date, durée, moment historique, début de carrière, contexte d’âge, période de vie, etc.) est associée à l’activité ou à l’évolution de l’entité, **incorporez explicitement cet élément temporel dans la description de l’entité**.
 - additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
 - entity_community: Domaine dans lequel evolue l'entite (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precise, ecrire "inconnue".
 Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)
@@ -42,7 +48,6 @@ Formatez les mots-clés de contenu comme suit ("content_keywords"{tuple_delimite
 4. Pour les entités identifiées à l'étape 1, en vous basant sur les relations entre les paires d'entités à l'étape 2 et les mots-clés généraux extraits à l'étape 3, identifiez les connexions ou les points communs entre plusieurs entités et construisez autant que possible un ensemble d'entités associées d'ordre supérieur.
 (Remarque: Évitez de fusionner de force toutes les entités en une seule association. Si les mots-clés généraux ne sont pas fortement associés, construisez une association distincte.)
 Extrayez les informations suivantes de toutes les entités, paires d'entités et mots-clés généraux associés:
-
 - entities_set: L'ensemble des noms des éléments d'un ensemble d'entités associées d'ordre supérieur, tel qu'identifié à l'étape 1.
 - Association_description: Utilisez les relations entre les entités de l'ensemble pour créer une description détaillée, fluide et complète qui couvre toutes les entités de l'ensemble, sans omettre aucune information pertinente.
 - Association_generalization: Résumez le contenu de l’ensemble d’entités aussi succinctement que possible.
@@ -50,9 +55,24 @@ Extrayez les informations suivantes de toutes les entités, paires d'entités et
 - Association_strength: Un score numérique indiquant la force de l’association entre les entités de l’ensemble.
 Formatez chaque association comme ("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}<entity_nameN>{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)
 
-5. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations et associations identifiées aux étapes 1, 2 et 4. Utilisez **{record_delimiter}** comme délimiteur de liste.
+5. Raisonnement multi-hop : identifiez les relations indirectes entre les entités qui sont connectées via une ou plusieurs entités intermédiaires (ex: A → B → C). Pour chaque chemin pertinent:
+- path_entities: liste ordonnée des noms des entités impliquées dans le raisonnement
+- path_description: explication de la chaîne de connexion
+- path_keywords: mots-clés résumant le type de raisonnement
+- path_strength: score global de fiabilité de la relation indirecte (de 0 à 1)
+Formatez chaque relation multi-hop comme ("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)
 
-6. Une fois terminé, affichez {completion_delimiter}
+6. Relations latentes implicites : identifiez des paires d'entités qui ne sont pas explicitement reliées dans le texte, mais dont le lien implicite est fort d’après une analyse sémantique ou de contexte externe.
+- source_entity: entité source
+- target_entity: entité cible
+- latent_description: explication du lien supposé ou implicite
+- latent_keywords: concepts sémantiques ou liens thématiques
+- latent_strength: estimation numérique de la force de cette relation latente
+Formatez chaque relation implicite comme ("latent_relation"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<latent_description>{tuple_delimiter}<latent_keywords>{tuple_delimiter}<latent_strength>)
+
+7. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations, associations, raisonnements multi-hop et relations latentes identifiés aux étapes 1 à 6. Utilisez **{record_delimiter}** comme délimiteur de liste.
+
+8. Une fois terminé, affichez {completion_delimiter}
 
 ######################
 ---Examples---
@@ -94,6 +114,8 @@ Output:
 ("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"Jordan"{tuple_delimiter}"Taylor and Jordan interact directly regarding the device, leading to a moment of mutual respect and an uneasy truce."{tuple_delimiter}"conflict resolution, mutual respect"{tuple_delimiter}8){record_delimiter}
 ("relationship"{tuple_delimiter}"Jordan"{tuple_delimiter}"Cruz"{tuple_delimiter}"Jordan's commitment to discovery is in rebellion against Cruz's vision of control and order."{tuple_delimiter}"ideological conflict, rebellion"{tuple_delimiter}5){record_delimiter}
 ("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"The Device"{tuple_delimiter}"Taylor shows reverence towards the device, indicating its importance and potential impact."{tuple_delimiter}"reverence, technological significance"{tuple_delimiter}9){record_delimiter}
+("multi_hop"{tuple_delimiter}["Alex", "Jordan", "The Device"]{tuple_delimiter}"Alex and Jordan are indirectly connected through their shared interest in the Device"{tuple_delimiter}"shared curiosity"{tuple_delimiter}0.6){record_delimiter}
+("latent_relation"{tuple_delimiter}"Cruz"{tuple_delimiter}"The Device"{tuple_delimiter}"Cruz seeks to control the discoveries around the Device although not directly involved"{tuple_delimiter}"control ambition"{tuple_delimiter}0.4){record_delimiter}
 ("Association"{tuple_delimiter}"Alex"{tuple_delimiter}"Taylor"{tuple_delimiter}"Jordan"{tuple_delimiter}"The Device"{tuple_delimiter}"These characters are linked through their shared interactions with the Device, balancing rivalry with curiosity."{tuple_delimiter}"Shared interest in the Device"{tuple_delimiter}"team dynamics, technology curiosity"{tuple_delimiter}7){record_delimiter}
 ("content_keywords"{tuple_delimiter}"power dynamics, ideological conflict, discovery, rebellion"){completion_delimiter}
 #############################""",
@@ -123,6 +145,8 @@ Output:
 ("relationship"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Nexon Technologies' stock decline contributed to the overall drop in the Global Tech Index."{tuple_delimiter}"company impact, index movement"{tuple_delimiter}8){record_delimiter}
 ("relationship"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"Gold prices rose as investors sought safe-haven assets during the market selloff."{tuple_delimiter}"market reaction, safe-haven investment"{tuple_delimiter}10){record_delimiter}
 ("relationship"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"Speculation over Federal Reserve policy changes contributed to market volatility and investor selloff."{tuple_delimiter}"interest rate impact, financial regulation"{tuple_delimiter}7){record_delimiter}
+("multi_hop"{tuple_delimiter}["Federal Reserve Policy Announcement", "Market Selloff", "Global Tech Index"]{tuple_delimiter}"Policy speculation triggers a selloff affecting the tech index"{tuple_delimiter}"policy influence"{tuple_delimiter}0.75){record_delimiter}
+("latent_relation"{tuple_delimiter}"Omega Energy"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"Energy stocks may react to policy shifts even without direct mention"{tuple_delimiter}"market anticipation"{tuple_delimiter}0.5){record_delimiter}
 ("Association"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"The tech index and Nexon both reflect the broader market selloff driven by policy speculation."{tuple_delimiter}"Tech stocks react to policy fears"{tuple_delimiter}"market trends, tech stocks"{tuple_delimiter}8){record_delimiter}
 ("content_keywords"{tuple_delimiter}"market downturn, investor sentiment, commodities, Federal Reserve, stock performance"){completion_delimiter}
 #############################""",
@@ -145,6 +169,8 @@ Output:
 ("relationship"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"Noah Carter set a new 100m sprint record at the championship."{tuple_delimiter}"athlete achievement, record-breaking"{tuple_delimiter}10){record_delimiter}
 ("relationship"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"Noah Carter used carbon-fiber spikes to enhance performance during the race."{tuple_delimiter}"athletic equipment, performance boost"{tuple_delimiter}7){record_delimiter}
 ("relationship"{tuple_delimiter}"World Athletics Federation"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"The World Athletics Federation is responsible for validating and recognizing new sprint records."{tuple_delimiter}"sports regulation, record certification"{tuple_delimiter}9){record_delimiter}
+("multi_hop"{tuple_delimiter}["Carbon-Fiber Spikes", "Noah Carter", "100m Sprint Record"]{tuple_delimiter}"Advanced equipment helped Noah Carter set the new record"{tuple_delimiter}"performance enhancement"{tuple_delimiter}0.85){record_delimiter}
+("latent_relation"{tuple_delimiter}"Tokyo"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"The host city fosters technology adoption even if not directly stated"{tuple_delimiter}"innovation climate"{tuple_delimiter}0.5){record_delimiter}
 ("Association"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"Advanced spikes enabled Noah Carter to break the 100m record, highlighting technology's impact on performance."{tuple_delimiter}"Record broken thanks to tech"{tuple_delimiter}"athletic performance, technology"{tuple_delimiter}9){record_delimiter}
 ("content_keywords"{tuple_delimiter}"athletics, sprinting, record-breaking, sports technology, competition"){completion_delimiter}
 #############################""",
@@ -179,7 +205,7 @@ Utilisez {language} comme langue de sortie.
 1. Identifiez toutes les entités. Pour chaque entité identifiée, extrayez les informations suivantes:
 - entity_name: nom de l'entité, utilisez la même langue que le texte saisi. Si le nom est en anglais, mettez une majuscule.
 - entity_type: l'un des types suivants : [{entity_types}]
-- entity_description: description complète des attributs et des activités de l'entité
+- entity_description: description complète des attributs et des activités de l'entité. Si une **information temporelle** (date, durée, moment historique, début de carrière, contexte d’âge, période de vie, etc.) est associée à l’activité ou à l’évolution de l’entité, **incorporez explicitement cet élément temporel dans la description de l’entité**.
 - additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
 - entity_community: Domaine dans lequel evolue l'entite (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precise, ecrire "inconnue".
 Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)
@@ -199,7 +225,6 @@ Formatez les mots-clés de contenu comme suit ("content_keywords"{tuple_delimite
 4. Pour les entités identifiées à l'étape 1, en vous basant sur les relations entre les paires d'entités à l'étape 2 et les mots-clés généraux extraits à l'étape 3, identifiez les connexions ou les points communs entre plusieurs entités et construisez autant que possible un ensemble d'entités associées d'ordre supérieur.
 (Remarque: Évitez de fusionner de force toutes les entités en une seule association. Si les mots-clés généraux ne sont pas fortement associés, construisez une association distincte.)
 Extrayez les informations suivantes de toutes les entités, paires d'entités et mots-clés généraux associés:
-
 - entities_set: L'ensemble des noms des éléments d'un ensemble d'entités associées d'ordre supérieur, tel qu'identifié à l'étape 1.
 - Association_description: Utilisez les relations entre les entités de l'ensemble pour créer une description détaillée, fluide et complète qui couvre toutes les entités de l'ensemble, sans omettre aucune information pertinente.
 - Association_generalization: Résumez le contenu de l’ensemble d’entités aussi succinctement que possible.
@@ -207,9 +232,24 @@ Extrayez les informations suivantes de toutes les entités, paires d'entités et
 - Association_strength: Un score numérique indiquant la force de l’association entre les entités de l’ensemble.
 Formatez chaque association comme ("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}<entity_nameN>{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)
 
-5. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations et associations identifiées aux étapes 1, 2 et 4. Utilisez **{record_delimiter}** comme délimiteur de liste.
+5. Raisonnement multi-hop : identifiez les relations indirectes entre les entités qui sont connectées via une ou plusieurs entités intermédiaires (ex: A → B → C). Pour chaque chemin pertinent:
+- path_entities: liste ordonnée des noms des entités impliquées dans le raisonnement
+- path_description: explication de la chaîne de connexion
+- path_keywords: mots-clés résumant le type de raisonnement
+- path_strength: score global de fiabilité de la relation indirecte (de 0 à 1)
+Formatez chaque relation multi-hop comme ("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)
 
-6. Une fois terminé, affichez {completion_delimiter}
+6. Relations latentes implicites : identifiez des paires d'entités qui ne sont pas explicitement reliées dans le texte, mais dont le lien implicite est fort d’après une analyse sémantique ou de contexte externe.
+- source_entity: entité source
+- target_entity: entité cible
+- latent_description: explication du lien supposé ou implicite
+- latent_keywords: concepts sémantiques ou liens thématiques
+- latent_strength: estimation numérique de la force de cette relation latente
+Formatez chaque relation implicite comme ("latent_relation"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<latent_description>{tuple_delimiter}<latent_keywords>{tuple_delimiter}<latent_strength>)
+
+7. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations, associations, raisonnements multi-hop et relations latentes identifiés aux étapes 1 à 6. Utilisez **{record_delimiter}** comme délimiteur de liste.
+
+8. Une fois terminé, affichez {completion_delimiter}
 
 ---Output---
 

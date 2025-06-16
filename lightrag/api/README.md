@@ -376,7 +376,7 @@ Each storage type has several implementations:
 * KV_STORAGE supported implementations:
 
 ```
-JsonKVStorage    JsonFile (default)
+JsonKVStorage    JsonFile
 PGKVStorage      Postgres
 RedisKVStorage   Redis
 MongoKVStorage   MongoDB
@@ -385,7 +385,7 @@ MongoKVStorage   MongoDB
 * GRAPH_STORAGE supported implementations:
 
 ```
-NetworkXStorage      NetworkX (default)
+NetworkXStorage      NetworkX
 Neo4JStorage         Neo4J
 PGGraphStorage       PostgreSQL with AGE plugin
 ```
@@ -395,9 +395,9 @@ PGGraphStorage       PostgreSQL with AGE plugin
 * VECTOR_STORAGE supported implementations:
 
 ```
-NanoVectorDBStorage         NanoVector (default)
+NanoVectorDBStorage         NanoVector
 PGVectorStorage             Postgres
-MilvusVectorDBStorage       Milvus
+MilvusVectorDBStorage       Milvus (default)
 ChromaVectorDBStorage       Chroma
 FaissVectorDBStorage        Faiss
 QdrantVectorDBStorage       Qdrant
@@ -407,8 +407,8 @@ MongoVectorDBStorage        MongoDB
 * DOC_STATUS_STORAGE: supported implementations:
 
 ```
-JsonDocStatusStorage        JsonFile (default)
-PGDocStatusStorage          Postgres
+JsonDocStatusStorage        JsonFile
+PGDocStatusStorage          Postgres (default)
 MongoDocStatusStorage       MongoDB
 ```
 
@@ -417,9 +417,9 @@ MongoDocStatusStorage       MongoDB
 You can select storage implementation by environment variables. You can set the following environment variables to a specific storage implementation name before the first start of the API Server:
 
 ```
-LIGHTRAG_KV_STORAGE=PGKVStorage
-LIGHTRAG_VECTOR_STORAGE=PGVectorStorage
-LIGHTRAG_GRAPH_STORAGE=PGGraphStorage
+LIGHTRAG_KV_STORAGE=RedisKVStorage
+LIGHTRAG_VECTOR_STORAGE=MilvusVectorDBStorage
+LIGHTRAG_GRAPH_STORAGE=Neo4JStorage
 LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
 ```
 

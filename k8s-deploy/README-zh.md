@@ -176,8 +176,8 @@ env:
   EMBEDDING_BINDING_API_KEY:                # API密钥
 
   # 存储配置
-  LIGHTRAG_KV_STORAGE: PGKVStorage              # 键值存储类型
-  LIGHTRAG_VECTOR_STORAGE: PGVectorStorage      # 向量存储类型
+  LIGHTRAG_KV_STORAGE: RedisKVStorage              # 键值存储类型
+  LIGHTRAG_VECTOR_STORAGE: MilvusVectorDBStorage      # 向量存储类型
   LIGHTRAG_GRAPH_STORAGE: Neo4JStorage          # 图存储类型
   LIGHTRAG_DOC_STATUS_STORAGE: PGDocStatusStorage  # 文档状态存储类型
 ```

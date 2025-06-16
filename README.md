@@ -225,10 +225,10 @@ A full list of LightRAG init parameters:
 | **Parameter** | **Type** | **Explanation** | **Default** |
 |--------------|----------|-----------------|-------------|
 | **working_dir** | `str` | Directory where the cache will be stored | `lightrag_cache+timestamp` |
-| **kv_storage** | `str` | Storage type for documents and text chunks. Supported types: `JsonKVStorage`,`PGKVStorage`,`RedisKVStorage`,`MongoKVStorage` | `JsonKVStorage` |
-| **vector_storage** | `str` | Storage type for embedding vectors. Supported types: `NanoVectorDBStorage`,`PGVectorStorage`,`MilvusVectorDBStorage`,`ChromaVectorDBStorage`,`FaissVectorDBStorage`,`MongoVectorDBStorage`,`QdrantVectorDBStorage` | `NanoVectorDBStorage` |
-| **graph_storage** | `str` | Storage type for graph edges and nodes. Supported types: `NetworkXStorage`,`Neo4JStorage`,`PGGraphStorage`,`AGEStorage` | `NetworkXStorage` |
-| **doc_status_storage** | `str` | Storage type for documents process status. Supported types: `JsonDocStatusStorage`,`PGDocStatusStorage`,`MongoDocStatusStorage` | `JsonDocStatusStorage` |
+| **kv_storage** | `str` | Storage type for documents and text chunks. Supported types: `JsonKVStorage`,`PGKVStorage`,`RedisKVStorage`,`MongoKVStorage` | `RedisKVStorage` |
+| **vector_storage** | `str` | Storage type for embedding vectors. Supported types: `NanoVectorDBStorage`,`PGVectorStorage`,`MilvusVectorDBStorage`,`ChromaVectorDBStorage`,`FaissVectorDBStorage`,`MongoVectorDBStorage`,`QdrantVectorDBStorage` | `MilvusVectorDBStorage` |
+| **graph_storage** | `str` | Storage type for graph edges and nodes. Supported types: `NetworkXStorage`,`Neo4JStorage`,`PGGraphStorage`,`AGEStorage` | `Neo4JStorage` |
+| **doc_status_storage** | `str` | Storage type for documents process status. Supported types: `JsonDocStatusStorage`,`PGDocStatusStorage`,`MongoDocStatusStorage` | `PGDocStatusStorage` |
 | **chunk_token_size** | `int` | Maximum token size per chunk when splitting documents | `1200` |
 | **chunk_overlap_token_size** | `int` | Overlap token size between two chunks when splitting documents | `100` |
 | **tokenizer** | `Tokenizer` | The function used to convert text into tokens (numbers) and back using .encode() and .decode() functions following `TokenizerInterface` protocol. If you don't specify one, it will use the default Tiktoken tokenizer. | `TiktokenTokenizer` |
@@ -1468,6 +1468,31 @@ def get_summary(context, tot_tokens=2000):
 ```
 
 </details>
+
+### Step-2bis – Multi-hop Reasoning
+
+After generating queries, identify indirect chains of entities in the knowledge graph. Use
+Personalized PageRank (PPR) or HNSW search to explore paths such as `A → B → C`.
+For each path record:
+
+- `path_entities` – ordered list of entities
+- `path_description` – explanation of the indirect link
+- `path_keywords` – related concepts
+- `path_strength` – aggregated confidence score
+
+Format:
+
+```
+("multi_hop"<|>[<entity_1>, <entity_2>, ..., <entity_n>]<|><path_description><|><path_keywords><|><path_strength>)
+```
+
+Optionally add latent links:
+
+```
+("latent_relation"<|><entity_1><|><entity_2><|><description><|><keywords><|><estimated_strength>)
+```
+
+These multi-hop relations should be integrated into the graph and considered during vector search.
 
 ### Step-3 Query
 
