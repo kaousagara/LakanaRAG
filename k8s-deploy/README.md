@@ -176,10 +176,10 @@ env:
   EMBEDDING_BINDING_API_KEY:                # API key
 
   # Storage Configuration
-  LIGHTRAG_KV_STORAGE: RedisKVStorage              # Key-value storage type
-  LIGHTRAG_VECTOR_STORAGE: MilvusVectorDBStorage      # Vector storage type
-  LIGHTRAG_GRAPH_STORAGE: Neo4JStorage          # Graph storage type
-  LIGHTRAG_DOC_STATUS_STORAGE: PGDocStatusStorage  # Document status storage type
+  LIGHTRAG_KV_STORAGE: JsonKVStorage              # Key-value storage type
+  LIGHTRAG_VECTOR_STORAGE: NanoVectorDBStorage      # Vector storage type
+  LIGHTRAG_GRAPH_STORAGE: NetworkXStorage          # Graph storage type
+  LIGHTRAG_DOC_STATUS_STORAGE: JsonDocStatusStorage  # Document status storage type
 ```
 
 ## Notes

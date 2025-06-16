@@ -377,15 +377,15 @@ LightRAG 使用 4 种类型的存储用于不同目的：
 ```
 JsonKVStorage    JsonFile
 PGKVStorage      Postgres
-RedisKVStorage   Redis(默认)
+RedisKVStorage   Redis
 MongoKVStorage   MogonDB
 ```
 
 * GRAPH_STORAGE 支持的实现名称
 
 ```
-NetworkXStorage      NetworkX
-Neo4JStorage         Neo4J(默认)
+NetworkXStorage      NetworkX(默认)
+Neo4JStorage         Neo4J
 PGGraphStorage       PostgreSQL with AGE plugin
 ```
 
@@ -394,9 +394,9 @@ PGGraphStorage       PostgreSQL with AGE plugin
 * VECTOR_STORAGE 支持的实现名称
 
 ```
-NanoVectorDBStorage         NanoVector
+NanoVectorDBStorage         NanoVector(默认)
 PGVectorStorage             Postgres
-MilvusVectorDBStorge        Milvus(默认)
+MilvusVectorDBStorge        Milvus
 ChromaVectorDBStorage       Chroma
 FaissVectorDBStorage        Faiss
 QdrantVectorDBStorage       Qdrant
@@ -406,8 +406,8 @@ MongoVectorDBStorage        MongoDB
 * DOC_STATUS_STORAGE 支持的实现名称
 
 ```
-JsonDocStatusStorage        JsonFile
-PGDocStatusStorage          Postgres(默认)
+JsonDocStatusStorage        JsonFile(默认)
+PGDocStatusStorage          Postgres
 MongoDocStatusStorage       MongoDB
 ```
 
@@ -416,10 +416,10 @@ MongoDocStatusStorage       MongoDB
 您可以通过环境变量选择存储实现。在首次启动 API 服务器之前，您可以将以下环境变量设置为特定的存储实现名称：
 
 ```
-LIGHTRAG_KV_STORAGE=RedisKVStorage
-LIGHTRAG_VECTOR_STORAGE=MilvusVectorDBStorage
-LIGHTRAG_GRAPH_STORAGE=Neo4JStorage
-LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
+LIGHTRAG_KV_STORAGE=JsonKVStorage
+LIGHTRAG_VECTOR_STORAGE=NanoVectorDBStorage
+LIGHTRAG_GRAPH_STORAGE=NetworkXStorage
+LIGHTRAG_DOC_STATUS_STORAGE=JsonDocStatusStorage
 ```
 
 在向 LightRAG 添加文档后，您不能更改存储实现选择。目前尚不支持从一个存储实现迁移到另一个存储实现。更多信息请阅读示例 env 文件或 config.ini 文件。

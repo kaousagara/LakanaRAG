@@ -35,10 +35,10 @@ ollama_server_infos = OllamaServerInfos()
 class DefaultRAGStorageConfig:
     """Default storage backend selections for LightRAG."""
 
-    KV_STORAGE = "RedisKVStorage"
-    VECTOR_STORAGE = "MilvusVectorDBStorage"
-    GRAPH_STORAGE = "Neo4JStorage"
-    DOC_STATUS_STORAGE = "PGDocStatusStorage"
+    KV_STORAGE = "JsonKVStorage"
+    VECTOR_STORAGE = "NanoVectorDBStorage"
+    GRAPH_STORAGE = "NetworkXStorage"
+    DOC_STATUS_STORAGE = "JsonDocStatusStorage"
 
 
 def get_default_host(binding_type: str) -> str:

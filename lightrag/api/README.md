@@ -395,9 +395,9 @@ PGGraphStorage       PostgreSQL with AGE plugin
 * VECTOR_STORAGE supported implementations:
 
 ```
-NanoVectorDBStorage         NanoVector
+NanoVectorDBStorage         NanoVector (default)
 PGVectorStorage             Postgres
-MilvusVectorDBStorage       Milvus (default)
+MilvusVectorDBStorage       Milvus
 ChromaVectorDBStorage       Chroma
 FaissVectorDBStorage        Faiss
 QdrantVectorDBStorage       Qdrant
@@ -407,8 +407,8 @@ MongoVectorDBStorage        MongoDB
 * DOC_STATUS_STORAGE: supported implementations:
 
 ```
-JsonDocStatusStorage        JsonFile
-PGDocStatusStorage          Postgres (default)
+JsonDocStatusStorage        JsonFile (default)
+PGDocStatusStorage          Postgres
 MongoDocStatusStorage       MongoDB
 ```
 
@@ -417,10 +417,10 @@ MongoDocStatusStorage       MongoDB
 You can select storage implementation by environment variables. You can set the following environment variables to a specific storage implementation name before the first start of the API Server:
 
 ```
-LIGHTRAG_KV_STORAGE=RedisKVStorage
-LIGHTRAG_VECTOR_STORAGE=MilvusVectorDBStorage
-LIGHTRAG_GRAPH_STORAGE=Neo4JStorage
-LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
+LIGHTRAG_KV_STORAGE=JsonKVStorage
+LIGHTRAG_VECTOR_STORAGE=NanoVectorDBStorage
+LIGHTRAG_GRAPH_STORAGE=NetworkXStorage
+LIGHTRAG_DOC_STATUS_STORAGE=JsonDocStatusStorage
 ```
 
 You cannot change storage implementation selection after adding documents to LightRAG. Data migration from one storage implementation to another is not supported yet. For further information, please read the sample env file or config.ini file.
