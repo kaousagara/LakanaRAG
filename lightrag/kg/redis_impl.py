@@ -33,6 +33,9 @@ class RedisKVStorage(BaseKVStorage):
         redis_url = os.environ.get(
             "REDIS_URI", config.get("redis", "uri", fallback="redis://localhost:6379")
         )
+        redis_password = os.environ.get(
+            "REDIS_PASSWORD", config.get("redis", "password", fallback=None)
+        )
         # Create a connection pool with limits
         self._pool = ConnectionPool.from_url(
             redis_url,
@@ -40,6 +43,7 @@ class RedisKVStorage(BaseKVStorage):
             decode_responses=True,
             socket_timeout=SOCKET_TIMEOUT,
             socket_connect_timeout=SOCKET_CONNECT_TIMEOUT,
+            password=redis_password,
         )
         self._redis = Redis(connection_pool=self._pool)
         logger.info(
