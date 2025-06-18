@@ -16,3 +16,6 @@ DEFAULT_TIMEOUT = 150
 DEFAULT_LOG_MAX_BYTES = 10485760  # Default 10MB
 DEFAULT_LOG_BACKUP_COUNT = 5  # Default 5 backups
 DEFAULT_LOG_FILENAME = "lightrag.log"  # Default log filename
+
+# External link base for entity names in responses
+DEFAULT_ENTITY_LINK_BASE_URL = "https://example.com/entity/"

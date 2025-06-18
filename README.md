@@ -1469,6 +1469,31 @@ def get_summary(context, tot_tokens=2000):
 
 </details>
 
+### Step-2bis – Multi-hop Reasoning
+
+After generating queries, identify indirect chains of entities in the knowledge graph. Use
+Personalized PageRank (PPR) or HNSW search to explore paths such as `A → B → C`.
+For each path record:
+
+- `path_entities` – ordered list of entities
+- `path_description` – explanation of the indirect link
+- `path_keywords` – related concepts
+- `path_strength` – aggregated confidence score
+
+Format:
+
+```
+("multi_hop"<|>[<entity_1>, <entity_2>, ..., <entity_n>]<|><path_description><|><path_keywords><|><path_strength>)
+```
+
+Optionally add latent links:
+
+```
+("latent_relation"<|><entity_1><|><entity_2><|><description><|><keywords><|><estimated_strength>)
+```
+
+These multi-hop relations should be integrated into the graph and considered during vector search.
+
 ### Step-3 Query
 
 For the queries generated in Step-2, we will extract them and query LightRAG.

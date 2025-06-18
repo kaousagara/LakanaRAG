@@ -24,6 +24,7 @@ from typing import (
 from lightrag.constants import (
     DEFAULT_MAX_TOKEN_SUMMARY,
     DEFAULT_FORCE_LLM_SUMMARY_ON_MERGE,
+    DEFAULT_ENTITY_LINK_BASE_URL,
 )
 from lightrag.utils import get_env_value
 
@@ -112,6 +113,11 @@ class LightRAG:
 
     doc_status_storage: str = field(default="JsonDocStatusStorage")
     """Storage type for tracking document processing statuses."""
+
+    entity_link_base_url: str = field(
+        default=os.getenv("ENTITY_LINK_BASE_URL", DEFAULT_ENTITY_LINK_BASE_URL)
+    )
+    """Base URL used to turn entity names into hyperlinks in responses."""
 
     # Logging (Deprecated, use setup_logger in utils.py instead)
     # ---

@@ -36,6 +36,7 @@ from .base import (
     QueryParam,
 )
 from .prompt import GRAPH_FIELD_SEP, PROMPTS
+from .constants import DEFAULT_ENTITY_LINK_BASE_URL
 import time
 from dotenv import load_dotenv
 
@@ -98,6 +99,67 @@ def chunking_by_token_size(
                 }
             )
     return results
+
+
+def _hyperlink_name(name: str, entity_type: str | None, base_url: str) -> str:
+    """Return a markdown hyperlink for persons and organisations."""
+    if entity_type and entity_type.lower() in {
+        "personne",
+        "organisation",
+        "person",
+        "organization",
+    }:
+        from urllib.parse import quote
+
+        if not base_url.endswith("/"):
+            base_url = f"{base_url}/"
+
+        return f"[{name}]({base_url}{quote(name)})"
+    return name
+
+
+def _add_entity_links(
+    entities: list[dict],
+    relations: list[dict],
+    multi_hops: list[dict],
+    base_url: str,
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """Add hyperlinks to entity names in contexts."""
+
+    type_map = {
+        e.get("entity") or e.get("entity_name"): e.get("type") or e.get("entity_type")
+        for e in entities
+    }
+
+    def copy_ent(ent: dict) -> dict:
+        new_ent = ent.copy()
+        key = "entity" if "entity" in ent else "entity_name"
+        new_ent[key] = _hyperlink_name(
+            ent[key], new_ent.get("type") or new_ent.get("entity_type"), base_url
+        )
+        return new_ent
+
+    new_entities = [copy_ent(e) for e in entities]
+
+    new_relations = []
+    for rel in relations:
+        nr = rel.copy()
+        for k in ("entity1", "entity2", "source_entity", "target_entity"):
+            if k in nr:
+                nr[k] = _hyperlink_name(nr[k], type_map.get(nr[k]), base_url)
+        new_relations.append(nr)
+
+    new_multi_hops = []
+    for mh in multi_hops:
+        nm = mh.copy()
+        if "path_entities" in nm:
+            nm["path_entities"] = [
+                _hyperlink_name(name, type_map.get(name), base_url)
+                for name in nm["path_entities"]
+            ]
+        new_multi_hops.append(nm)
+
+    return new_entities, new_relations, new_multi_hops
 
 
 async def _handle_entity_relation_summary(
@@ -183,13 +245,11 @@ async def _handle_single_entity_extraction(
     entity_description = clean_str(record_attributes[3])
     entity_description = normalize_extracted_info(entity_description)
 
-    additional_properties = normalize_extracted_info(
-        clean_str(record_attributes[4])
-    )
+    additional_properties = normalize_extracted_info(clean_str(record_attributes[4]))
 
-    entity_community = normalize_extracted_info(
-        clean_str(record_attributes[5])
-    ) or "inconnue"
+    entity_community = (
+        normalize_extracted_info(clean_str(record_attributes[5])) or "inconnue"
+    )
 
     if not entity_description.strip():
         logger.warning(
@@ -285,6 +345,77 @@ async def _handle_single_association_extraction(
     )
 
 
+async def _handle_single_multi_hop_extraction(
+    record_attributes: list[str],
+    chunk_key: str,
+    file_path: str = "unknown_source",
+):
+    """Parse a multi_hop record into a dictionary."""
+    if len(record_attributes) < 5 or '"multi_hop"' not in record_attributes[0]:
+        return None
+
+    entities_raw = record_attributes[1]
+    # Remove brackets and split by comma
+    entities = [
+        standardize_entity_name(normalize_extracted_info(e.strip(), is_entity=True))
+        for e in entities_raw.strip("[]").split(",")
+        if e.strip()
+    ]
+    path_description = normalize_extracted_info(clean_str(record_attributes[2]))
+    path_keywords = normalize_extracted_info(clean_str(record_attributes[3]))
+    strength = (
+        float(record_attributes[4].strip('"').strip("'"))
+        if len(record_attributes) > 4
+        and is_float_regex(record_attributes[4].strip('"').strip("'"))
+        else 1.0
+    )
+
+    return dict(
+        path_entities=entities,
+        path_description=path_description,
+        path_keywords=path_keywords,
+        path_strength=strength,
+        source_id=chunk_key,
+        file_path=file_path,
+    )
+
+
+async def _handle_single_latent_relation_extraction(
+    record_attributes: list[str],
+    chunk_key: str,
+    file_path: str = "unknown_source",
+):
+    """Parse a latent_relation record into an edge dict."""
+    if len(record_attributes) < 6 or '"latent_relation"' not in record_attributes[0]:
+        return None
+
+    source = standardize_entity_name(
+        normalize_extracted_info(clean_str(record_attributes[1]), is_entity=True)
+    )
+    target = standardize_entity_name(
+        normalize_extracted_info(clean_str(record_attributes[2]), is_entity=True)
+    )
+    description = normalize_extracted_info(clean_str(record_attributes[3]))
+    keywords = normalize_extracted_info(clean_str(record_attributes[4]))
+    keywords = keywords.replace("，", ",")
+    strength = (
+        float(record_attributes[5].strip('"').strip("'"))
+        if is_float_regex(record_attributes[5].strip('"').strip("'"))
+        else 1.0
+    )
+
+    return dict(
+        src_id=source,
+        tgt_id=target,
+        weight=strength,
+        description=description,
+        keywords=keywords,
+        latent=True,
+        source_id=chunk_key,
+        file_path=file_path,
+    )
+
+
 async def _merge_nodes_then_upsert(
     entity_name: str,
     nodes_data: list[dict],
@@ -337,12 +468,18 @@ async def _merge_nodes_then_upsert(
 
     additional_properties = GRAPH_FIELD_SEP.join(
         sorted(
-            set([dp.get("additional_properties", "") for dp in nodes_data] + already_additional_properties)
+            set(
+                [dp.get("additional_properties", "") for dp in nodes_data]
+                + already_additional_properties
+            )
         )
     )
     entity_community = GRAPH_FIELD_SEP.join(
         sorted(
-            set([dp.get("entity_community", "inconnue") for dp in nodes_data] + already_entity_communities)
+            set(
+                [dp.get("entity_community", "inconnue") for dp in nodes_data]
+                + already_entity_communities
+            )
         )
     )
 
@@ -635,6 +772,50 @@ async def _merge_association_then_upsert(
     return node_data
 
 
+async def _merge_multi_hop_then_upsert(
+    path: dict,
+    knowledge_graph_inst: BaseGraphStorage,
+    global_config: dict,
+    pipeline_status: dict | None = None,
+    pipeline_status_lock=None,
+    llm_response_cache: BaseKVStorage | None = None,
+):
+    """Insert a multi-hop path as a node with edges to each entity."""
+    entities = [standardize_entity_name(e) for e in path["path_entities"]]
+    path_id = compute_mdhash_id("->".join(entities), prefix="mh-")
+    description = path["path_description"]
+
+    node_data = dict(
+        entity_id=path_id,
+        entity_type="MULTI_HOP",
+        description=description,
+        keywords=path.get("path_keywords", ""),
+        strength=path.get("path_strength", 1.0),
+        path="->".join(entities),
+        source_id=path.get("source_id"),
+        file_path=path.get("file_path", "unknown_source"),
+        created_at=int(time.time()),
+    )
+    await knowledge_graph_inst.upsert_node(path_id, node_data)
+
+    inserted_edges = []
+    for ent in entities:
+        edge_info = dict(
+            weight=path.get("path_strength", 1.0),
+            description=description,
+            keywords=path.get("path_keywords", ""),
+            source_id=path.get("source_id"),
+            file_path=path.get("file_path", "unknown_source"),
+            latent=True,
+            created_at=int(time.time()),
+        )
+        await knowledge_graph_inst.upsert_edge(path_id, ent, edge_info)
+        inserted_edges.append({"src_id": path_id, "tgt_id": ent, **edge_info})
+
+    node_data["entity_name"] = path_id
+    return node_data, inserted_edges
+
+
 async def merge_nodes_and_edges(
     chunk_results: list,
     knowledge_graph_inst: BaseGraphStorage,
@@ -651,7 +832,9 @@ async def merge_nodes_and_edges(
     """Merge nodes and edges from extraction results
 
     Args:
-        chunk_results: List of tuples (maybe_nodes, maybe_edges) containing extracted entities and relationships
+        chunk_results: List of tuples (maybe_nodes, maybe_edges,
+        maybe_assocs, maybe_multi_hops) containing extracted
+        entities, relationships, associations and multi-hop paths
         knowledge_graph_inst: Knowledge graph storage
         entity_vdb: Entity vector database
         relationships_vdb: Relationship vector database
@@ -667,8 +850,9 @@ async def merge_nodes_and_edges(
     all_nodes = defaultdict(list)
     all_edges = defaultdict(list)
     all_assocs = []
+    all_multi_hops = []
 
-    for maybe_nodes, maybe_edges, maybe_assocs in chunk_results:
+    for maybe_nodes, maybe_edges, maybe_assocs, maybe_mhops in chunk_results:
         # Collect nodes
         for entity_name, entities in maybe_nodes.items():
             all_nodes[entity_name].extend(entities)
@@ -679,11 +863,14 @@ async def merge_nodes_and_edges(
             all_edges[sorted_edge_key].extend(edges)
         for assoc in maybe_assocs:
             all_assocs.append(assoc)
+        for mh in maybe_mhops:
+            all_multi_hops.append(mh)
 
     # Centralized processing of all nodes and edges
     entities_data = []
     relationships_data = []
     associations_nodes = []
+    multi_hop_nodes = []
 
     # Merge nodes and edges
     # Use graph database lock to ensure atomic merges and updates
@@ -736,10 +923,24 @@ async def merge_nodes_and_edges(
             )
             associations_nodes.append(assoc_node)
 
+        multi_hop_edges_from_paths = []
+        for mh in all_multi_hops:
+            mh_node, mh_edges = await _merge_multi_hop_then_upsert(
+                mh,
+                knowledge_graph_inst,
+                global_config,
+                pipeline_status,
+                pipeline_status_lock,
+                llm_response_cache,
+            )
+            multi_hop_nodes.append(mh_node)
+            multi_hop_edges_from_paths.extend(mh_edges)
+
         # Update total counts
         total_entities_count = len(entities_data)
         total_relations_count = len(relationships_data)
         total_assoc_count = len(associations_nodes)
+        total_multi_count = len(multi_hop_nodes)
 
         log_message = f"Updating {total_entities_count} entities  {current_file_number}/{total_files}: {file_path}"
         logger.info(log_message)
@@ -749,8 +950,10 @@ async def merge_nodes_and_edges(
                 pipeline_status["history_messages"].append(log_message)
 
         # Update vector databases with all collected data
-        if entity_vdb is not None and (entities_data or associations_nodes):
-            all_nodes_data = entities_data + associations_nodes
+        if entity_vdb is not None and (
+            entities_data or associations_nodes or multi_hop_nodes
+        ):
+            all_nodes_data = entities_data + associations_nodes + multi_hop_nodes
             data_for_vdb = {
                 compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
                     "entity_name": dp["entity_name"],
@@ -763,24 +966,79 @@ async def merge_nodes_and_edges(
             }
             await entity_vdb.upsert(data_for_vdb)
 
-        log_message = f"Updating {total_relations_count} relations and {total_assoc_count} associations {current_file_number}/{total_files}: {file_path}"
+        log_message = f"Updating {total_relations_count} relations, {total_assoc_count} associations and {total_multi_count} multi-hop paths {current_file_number}/{total_files}: {file_path}"
         logger.info(log_message)
         if pipeline_status is not None:
             async with pipeline_status_lock:
                 pipeline_status["latest_message"] = log_message
                 pipeline_status["history_messages"].append(log_message)
 
-        if relationships_vdb is not None and relationships_data:
+        if relationships_vdb is not None and (
+            relationships_data or multi_hop_edges_from_paths
+        ):
+            combined_edges = relationships_data + multi_hop_edges_from_paths
             data_for_vdb = {
-                compute_mdhash_id(dp["src_id"] + dp["tgt_id"], prefix="rel-"): {
-                    "src_id": dp["src_id"],
-                    "tgt_id": dp["tgt_id"],
-                    "keywords": dp["keywords"],
-                    "content": f"{dp['src_id']}\t{dp['tgt_id']}\n{dp['keywords']}\n{dp['description']}",
-                    "source_id": dp["source_id"],
-                    "file_path": dp.get("file_path", "unknown_source"),
+                compute_mdhash_id(e["src_id"] + e["tgt_id"], prefix="rel-"): {
+                    "src_id": e["src_id"],
+                    "tgt_id": e["tgt_id"],
+                    "keywords": e.get("keywords", ""),
+                    "content": f"{e['src_id']}\t{e['tgt_id']}\n{e.get('keywords','')}\n{e.get('description','')}",
+                    "source_id": e.get("source_id"),
+                    "file_path": e.get("file_path", "unknown_source"),
                 }
-                for dp in relationships_data
+                for e in combined_edges
+            }
+            await relationships_vdb.upsert(data_for_vdb)
+
+        # --------------------------------------------
+        # Multi-hop reasoning based on inserted nodes
+        # --------------------------------------------
+        multi_hop_edges = []
+        for ent in entities_data:
+            try:
+                paths = await knowledge_graph_inst.multi_hop_paths(
+                    ent["entity_name"], max_depth=3, top_k=3
+                )
+            except Exception as e:
+                logger.warning(
+                    f"multi_hop path search failed for {ent['entity_name']}: {e}"
+                )
+                continue
+
+            for p in paths:
+                if len(p["path_entities"]) < 2:
+                    continue
+                src = p["path_entities"][0]
+                tgt = p["path_entities"][-1]
+                edge_info = dict(
+                    weight=p["path_strength"],
+                    description=p["path_description"],
+                    keywords=p["path_keywords"],
+                    latent=True,
+                    source_id=ent.get("source_id", "multi_hop"),
+                    file_path=ent.get("file_path", file_path),
+                    created_at=int(time.time()),
+                )
+                await knowledge_graph_inst.upsert_edge(src, tgt, edge_info)
+                multi_hop_edges.append(
+                    {
+                        "src_id": src,
+                        "tgt_id": tgt,
+                        **edge_info,
+                    }
+                )
+
+        if relationships_vdb is not None and multi_hop_edges:
+            data_for_vdb = {
+                compute_mdhash_id(e["src_id"] + e["tgt_id"], prefix="rel-"): {
+                    "src_id": e["src_id"],
+                    "tgt_id": e["tgt_id"],
+                    "keywords": e["keywords"],
+                    "content": f"{e['src_id']}\t{e['tgt_id']}\n{e['keywords']}\n{e['description']}",
+                    "source_id": e["source_id"],
+                    "file_path": e.get("file_path", "unknown_source"),
+                }
+                for e in multi_hop_edges
             }
             await relationships_vdb.upsert(data_for_vdb)
 
@@ -846,11 +1104,14 @@ async def extract_entities(
             chunk_key (str): The chunk key for source tracking
             file_path (str): The file path for citation
         Returns:
-            tuple: (nodes_dict, edges_dict) containing the extracted entities and relationships
+            tuple: (nodes_dict, edges_dict, associations, multi_hops)
+            containing the extracted entities, relationships,
+            association groups and multi-hop paths
         """
         maybe_nodes = defaultdict(list)
         maybe_edges = defaultdict(list)
         maybe_assocs = []
+        maybe_multi_hops = []
 
         records = split_string_by_multi_markers(
             result,
@@ -880,14 +1141,31 @@ async def extract_entities(
                 maybe_edges[(if_relation["src_id"], if_relation["tgt_id"])].append(
                     if_relation
                 )
-            else:
-                if_assoc = await _handle_single_association_extraction(
-                    record_attributes, chunk_key, file_path
-                )
-                if if_assoc is not None:
-                    maybe_assocs.append(if_assoc)
+                continue
 
-        return maybe_nodes, maybe_edges, maybe_assocs
+            if_latent = await _handle_single_latent_relation_extraction(
+                record_attributes, chunk_key, file_path
+            )
+            if if_latent is not None:
+                maybe_edges[(if_latent["src_id"], if_latent["tgt_id"])].append(
+                    if_latent
+                )
+                continue
+
+            if_multi = await _handle_single_multi_hop_extraction(
+                record_attributes, chunk_key, file_path
+            )
+            if if_multi is not None:
+                maybe_multi_hops.append(if_multi)
+                continue
+
+            if_assoc = await _handle_single_association_extraction(
+                record_attributes, chunk_key, file_path
+            )
+            if if_assoc is not None:
+                maybe_assocs.append(if_assoc)
+
+        return maybe_nodes, maybe_edges, maybe_assocs, maybe_multi_hops
 
     async def _process_single_content(chunk_key_dp: tuple[str, TextChunkSchema]):
         """Process a single chunk
@@ -918,9 +1196,12 @@ async def extract_entities(
         history = pack_user_ass_to_openai_messages(hint_prompt, final_result)
 
         # Process initial extraction with file path
-        maybe_nodes, maybe_edges, maybe_assocs = await _process_extraction_result(
-            final_result, chunk_key, file_path
-        )
+        (
+            maybe_nodes,
+            maybe_edges,
+            maybe_assocs,
+            maybe_multi_hops,
+        ) = await _process_extraction_result(final_result, chunk_key, file_path)
 
         # Process additional gleaning results
         for now_glean_index in range(entity_extract_max_gleaning):
@@ -935,9 +1216,12 @@ async def extract_entities(
             history += pack_user_ass_to_openai_messages(continue_prompt, glean_result)
 
             # Process gleaning result separately with file path
-            glean_nodes, glean_edges, glean_assocs = await _process_extraction_result(
-                glean_result, chunk_key, file_path
-            )
+            (
+                glean_nodes,
+                glean_edges,
+                glean_assocs,
+                glean_multis,
+            ) = await _process_extraction_result(glean_result, chunk_key, file_path)
 
             # Merge results - only add entities and edges with new names
             for entity_name, entities in glean_nodes.items():
@@ -950,6 +1234,8 @@ async def extract_entities(
                     maybe_edges[edge_key].extend(edges)
             for assoc in glean_assocs:
                 maybe_assocs.append(assoc)
+            for mh in glean_multis:
+                maybe_multi_hops.append(mh)
 
             if now_glean_index == entity_extract_max_gleaning - 1:
                 break
@@ -969,15 +1255,16 @@ async def extract_entities(
         entities_count = len(maybe_nodes)
         relations_count = len(maybe_edges)
         assoc_count = len(maybe_assocs)
-        log_message = f"Chunk {processed_chunks} of {total_chunks} extracted {entities_count} Ent + {relations_count} Rel + {assoc_count} Assoc"
+        multi_count = len(maybe_multi_hops)
+        log_message = f"Chunk {processed_chunks} of {total_chunks} extracted {entities_count} Ent + {relations_count} Rel + {assoc_count} Assoc + {multi_count} Multi"
         logger.info(log_message)
         if pipeline_status is not None:
             async with pipeline_status_lock:
                 pipeline_status["latest_message"] = log_message
                 pipeline_status["history_messages"].append(log_message)
 
-        # Return the extracted nodes, edges and associations for centralized processing
-        return maybe_nodes, maybe_edges, maybe_assocs
+        # Return the extracted nodes, edges, associations and multi-hop paths
+        return maybe_nodes, maybe_edges, maybe_assocs, maybe_multi_hops
 
     # Get max async tasks limit from global_config
     llm_model_max_async = global_config.get("llm_model_max_async", 4)
@@ -1475,10 +1762,23 @@ async def _build_query_context(
     if not entities_context and not relations_context:
         return None
 
-    # 转换为 JSON 字符串
-    entities_str = json.dumps(entities_context, ensure_ascii=False)
-    relations_str = json.dumps(relations_context, ensure_ascii=False)
+    multi_hop_context = await _collect_multi_hop_paths(
+        entities_context, knowledge_graph_inst, top_k=query_param.top_k
+    )
+
+    base_url = os.getenv("ENTITY_LINK_BASE_URL", DEFAULT_ENTITY_LINK_BASE_URL)
+    (
+        entities_prompt,
+        relations_prompt,
+        multi_hop_prompt,
+    ) = _add_entity_links(
+        entities_context, relations_context, multi_hop_context, base_url
+    )
+
+    entities_str = json.dumps(entities_prompt, ensure_ascii=False)
+    relations_str = json.dumps(relations_prompt, ensure_ascii=False)
     text_units_str = json.dumps(text_units_context, ensure_ascii=False)
+    multi_hop_str = json.dumps(multi_hop_prompt, ensure_ascii=False)
 
     result = f"""-----Entities(KG)-----
 
@@ -1490,6 +1790,12 @@ async def _build_query_context(
 
 ```json
 {relations_str}
+```
+
+-----Multi-hop Paths-----
+
+```json
+{multi_hop_str}
 ```
 
 -----Document Chunks(DC)-----
@@ -1553,12 +1859,16 @@ async def _get_node_data(
         for other in node_datas:
             if nd["entity_name"] == other["entity_name"]:
                 continue
-            length = await knowledge_graph_inst.shortest_path_length(nd["entity_name"], other["entity_name"])
+            length = await knowledge_graph_inst.shortest_path_length(
+                nd["entity_name"], other["entity_name"]
+            )
             if length != -1:
                 score += 1 / (length + 1)
         nd["connectivity"] = score
 
-    node_datas = sorted(node_datas, key=lambda x: (x["rank"], x["connectivity"]), reverse=True)
+    node_datas = sorted(
+        node_datas, key=lambda x: (x["rank"], x["connectivity"]), reverse=True
+    )
     # get entitytext chunk
     use_text_units = await _find_most_related_text_unit_from_entities(
         node_datas,
@@ -1806,7 +2116,7 @@ async def _find_most_related_edges_from_entities(
                     continue
                 l1 = await knowledge_graph_inst.shortest_path_length(pair[0], ent)
                 l2 = await knowledge_graph_inst.shortest_path_length(pair[1], ent)
-                lengths = [l for l in (l1, l2) if l != -1]
+                lengths = [val for val in (l1, l2) if val != -1]
                 if lengths:
                     connectivity += 1 / (min(lengths) + 1)
 
@@ -1924,7 +2234,7 @@ async def _get_edge_data(
                 continue
             l1 = await knowledge_graph_inst.shortest_path_length(e["src_id"], ent)
             l2 = await knowledge_graph_inst.shortest_path_length(e["tgt_id"], ent)
-            lengths = [l for l in (l1, l2) if l != -1]
+            lengths = [val for val in (l1, l2) if val != -1]
             if lengths:
                 score += 1 / (min(lengths) + 1)
         e["connectivity"] = score
@@ -2111,6 +2421,32 @@ async def _find_related_text_unit_from_relationships(
     all_text_units: list[TextChunkSchema] = [t["data"] for t in truncated_text_units]
 
     return all_text_units
+
+
+async def _collect_multi_hop_paths(
+    entities_context: list[dict],
+    knowledge_graph_inst: BaseGraphStorage,
+    top_k: int = 5,
+) -> list[dict]:
+    """Collect multi-hop paths for top entities using Personalized PageRank."""
+
+    paths: list[dict] = []
+    for ent in entities_context[:top_k]:
+        ent_name = ent.get("entity") or ent.get("entity_name")
+        if not ent_name:
+            continue
+        try:
+            res = await knowledge_graph_inst.multi_hop_paths(
+                ent_name, max_depth=3, top_k=top_k
+            )
+        except Exception as e:
+            logger.warning(f"multi_hop retrieval failed for {ent_name}: {e}")
+            continue
+        paths.extend(res)
+
+    # Sort by strength and truncate
+    paths.sort(key=lambda x: x.get("path_strength", 0), reverse=True)
+    return paths[:top_k]
 
 
 async def naive_query(
@@ -2389,7 +2725,9 @@ async def query_with_keywords(
     )
 
     # Create a new string with the prompt and the keywords
-    keywords_str = ", ".join(ll_keywords + hl_keywords + ([community] if community else []))
+    keywords_str = ", ".join(
+        ll_keywords + hl_keywords + ([community] if community else [])
+    )
     formatted_question = (
         f"{prompt}\n\n### Keywords\n\n{keywords_str}\n\n### Query\n\n{query}"
     )

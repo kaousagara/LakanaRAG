@@ -375,7 +375,7 @@ LightRAG 使用 4 种类型的存储用于不同目的：
 * KV_STORAGE 支持的实现名称
 
 ```
-JsonKVStorage    JsonFile(默认)
+JsonKVStorage    JsonFile
 PGKVStorage      Postgres
 RedisKVStorage   Redis
 MongoKVStorage   MogonDB
@@ -416,10 +416,10 @@ MongoDocStatusStorage       MongoDB
 您可以通过环境变量选择存储实现。在首次启动 API 服务器之前，您可以将以下环境变量设置为特定的存储实现名称：
 
 ```
-LIGHTRAG_KV_STORAGE=PGKVStorage
-LIGHTRAG_VECTOR_STORAGE=PGVectorStorage
-LIGHTRAG_GRAPH_STORAGE=PGGraphStorage
-LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
+LIGHTRAG_KV_STORAGE=JsonKVStorage
+LIGHTRAG_VECTOR_STORAGE=NanoVectorDBStorage
+LIGHTRAG_GRAPH_STORAGE=NetworkXStorage
+LIGHTRAG_DOC_STATUS_STORAGE=JsonDocStatusStorage
 ```
 
 在向 LightRAG 添加文档后，您不能更改存储实现选择。目前尚不支持从一个存储实现迁移到另一个存储实现。更多信息请阅读示例 env 文件或 config.ini 文件。
