@@ -19,3 +19,6 @@ DEFAULT_LOG_FILENAME = "lightrag.log"  # Default log filename
 
 # External link base for entity names in responses
 DEFAULT_ENTITY_LINK_BASE_URL = "https://example.com/entity/"
+
+# Max content length for vector database fields to avoid oversized records
+MAX_VECTOR_CONTENT_LENGTH = 65000

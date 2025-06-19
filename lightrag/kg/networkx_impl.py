@@ -379,22 +379,28 @@ class NetworkXStorage(BaseGraphStorage):
         if start_node_id not in graph:
             return []
 
-        pr = nx.pagerank(graph, personalization={start_node_id: 1.0})
+        # Limit search to a subgraph within max_depth hops around the start node
+        neighbors = nx.single_source_shortest_path_length(
+            graph, start_node_id, cutoff=max_depth
+        ).keys()
+        subgraph = graph.subgraph(neighbors)
+
+        pr = nx.pagerank(subgraph, personalization={start_node_id: 1.0})
         paths: list[dict] = []
-        for target in graph.nodes:
+        for target in subgraph.nodes:
             if target == start_node_id:
                 continue
             for path in nx.all_simple_paths(
-                graph, source=start_node_id, target=target, cutoff=max_depth
+                subgraph, source=start_node_id, target=target, cutoff=max_depth
             ):
                 if len(path) < 3:
                     continue
                 strength = sum(pr.get(n, 0) for n in path) / len(path)
                 keywords: list[str] = []
                 for src, tgt in zip(path[:-1], path[1:]):
-                    edge = graph.edges.get((src, tgt))
-                    if not edge and graph.is_directed():
-                        edge = graph.edges.get((tgt, src))
+                    edge = subgraph.edges.get((src, tgt))
+                    if not edge and subgraph.is_directed():
+                        edge = subgraph.edges.get((tgt, src))
                     if edge:
                         k = edge.get("keywords")
                         if isinstance(k, str):

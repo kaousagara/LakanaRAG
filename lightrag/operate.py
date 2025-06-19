@@ -36,7 +36,7 @@ from .base import (
     QueryParam,
 )
 from .prompt import GRAPH_FIELD_SEP, PROMPTS
-from .constants import DEFAULT_ENTITY_LINK_BASE_URL
+from .constants import DEFAULT_ENTITY_LINK_BASE_URL, MAX_VECTOR_CONTENT_LENGTH
 import time
 from dotenv import load_dotenv
 
@@ -119,6 +119,13 @@ def _hyperlink_name(name: str, entity_type: str | None, base_url: str) -> str:
 
         return f"[{name}]({base_url}{quote(name)})"
     return name
+
+
+def _truncate_content(content: str, limit: int = MAX_VECTOR_CONTENT_LENGTH) -> str:
+    """Ensure content does not exceed vector DB field limits."""
+    if content and len(content) > limit:
+        return content[:limit]
+    return content
 
 
 def _add_entity_links(
@@ -961,7 +968,9 @@ async def merge_nodes_and_edges(
                 compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
                     "entity_name": dp["entity_name"],
                     "entity_type": dp.get("entity_type", "UNKNOWN"),
-                    "content": f"{dp['entity_name']}\n{dp['description']}\n{dp.get('additional_properties','')}\n{dp.get('entity_community','')}",
+                    "content": _truncate_content(
+                        f"{dp['entity_name']}\n{dp['description']}\n{dp.get('additional_properties','')}\n{dp.get('entity_community','')}"
+                    ),
                     "source_id": dp.get("source_id"),
                     "file_path": dp.get("file_path", "unknown_source"),
                 }
@@ -985,7 +994,9 @@ async def merge_nodes_and_edges(
                     "src_id": e["src_id"],
                     "tgt_id": e["tgt_id"],
                     "keywords": e.get("keywords", ""),
-                    "content": f"{e['src_id']}\t{e['tgt_id']}\n{e.get('keywords','')}\n{e.get('description','')}",
+                    "content": _truncate_content(
+                        f"{e['src_id']}\t{e['tgt_id']}\n{e.get('keywords','')}\n{e.get('description','')}"
+                    ),
                     "source_id": e.get("source_id"),
                     "file_path": e.get("file_path", "unknown_source"),
                 }
@@ -1037,7 +1048,9 @@ async def merge_nodes_and_edges(
                     "src_id": e["src_id"],
                     "tgt_id": e["tgt_id"],
                     "keywords": e["keywords"],
-                    "content": f"{e['src_id']}\t{e['tgt_id']}\n{e['keywords']}\n{e['description']}",
+                    "content": _truncate_content(
+                        f"{e['src_id']}\t{e['tgt_id']}\n{e['keywords']}\n{e['description']}"
+                    ),
                     "source_id": e["source_id"],
                     "file_path": e.get("file_path", "unknown_source"),
                 }
@@ -1829,6 +1842,37 @@ async def _get_node_data(
     results = await entities_vdb.query(query, top_k=fetch_k, ids=query_param.ids)
 
     if not len(results):
+        # Fallback: direct lookup by standardized name
+        normalized = standardize_entity_name(query)
+        node = await knowledge_graph_inst.get_node(normalized)
+        if node:
+            node_datas = [
+                {
+                    **node,
+                    "entity_name": normalized,
+                    "rank": 1.0,
+                    "created_at": node.get("created_at"),
+                }
+            ]
+            use_text_units = await _find_most_related_text_unit_from_entities(
+                node_datas,
+                query_param,
+                text_chunks_db,
+                knowledge_graph_inst,
+            )
+            use_relations = await _find_most_related_edges_from_entities(
+                node_datas,
+                query_param,
+                knowledge_graph_inst,
+            )
+            tokenizer: Tokenizer = text_chunks_db.global_config.get("tokenizer")
+            node_datas = truncate_list_by_token_size(
+                node_datas,
+                key=lambda x: x.get("description", ""),
+                max_token_size=query_param.max_token_for_local_context,
+                tokenizer=tokenizer,
+            )
+            return node_datas, use_relations, use_text_units
         return "", "", ""
 
     # Extract all entity IDs from your results list
