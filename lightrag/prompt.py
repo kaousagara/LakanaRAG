@@ -45,6 +45,26 @@ Pour chaque paire d'entités liées, extrayez les informations suivantes:
 - relationship_keywords: un ou plusieurs mots clés de haut niveau qui résument la nature globale de la relation, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques
 Formatez chaque relation comme ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
 
+2bis. **Raisonnement Multi-hop (PPR/HNSW)** :
+Identifiez toutes les chaînes de relations indirectes pertinentes impliquant **au moins trois entités connectées** (ex: A → B → C).
+- path_entities : Liste des entités formant le chemin
+- path_description : Explication du lien indirect
+- path_keywords : Thèmes/Concepts
+- path_strength : Score global , combinant les liens intermédiaires
+→ Format :
+
+("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)
+
+**Relations latentes implicites** (optionnel) : Si certaines entités ne sont **pas directement connectées dans le texte**, mais qu’un raisonnement sémantique suggère une forte probabilité de lien :
+- source_entity
+- target_entity
+- description
+- keywords
+- estimated_strength
+→ Format :
+
+("latent_relation"{tuple_delimiter}<entity_1>{tuple_delimiter}<entity_2>{tuple_delimiter}<description>{tuple_delimiter}<keywords>{tuple_delimiter}<estimated_strength>)
+
 3. Identifiez des mots-clés généraux qui résument les principaux concepts, thèmes ou sujets du texte. Ils doivent refléter les idées générales du document.
 Formatez les mots-clés de contenu comme suit ("content_keywords"{tuple_delimiter}<high_level_keywords>)
 
@@ -59,24 +79,10 @@ Extrayez les informations suivantes de toutes les entités, paires d'entités et
 - Association_strength: Un score numérique indiquant la force de l’association entre les entités de l’ensemble.
 Formatez chaque association comme ("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}<entity_nameN>{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)
 
-5. Raisonnement multi-hop : identifiez les relations indirectes entre les entités qui sont connectées via une ou plusieurs entités intermédiaires (ex: A → B → C). Pour chaque chemin pertinent:
-- path_entities: liste ordonnée des noms des entités impliquées dans le raisonnement
-- path_description: explication de la chaîne de connexion
-- path_keywords: mots-clés résumant le type de raisonnement
-- path_strength: score global de fiabilité de la relation indirecte (de 0 à 1)
-Formatez chaque relation multi-hop comme ("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)
 
-6. Relations latentes implicites : identifiez des paires d'entités qui ne sont pas explicitement reliées dans le texte, mais dont le lien implicite est fort d’après une analyse sémantique ou de contexte externe.
-- source_entity: entité source
-- target_entity: entité cible
-- latent_description: explication du lien supposé ou implicite
-- latent_keywords: concepts sémantiques ou liens thématiques
-- latent_strength: estimation numérique de la force de cette relation latente
-Formatez chaque relation implicite comme ("latent_relation"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<latent_description>{tuple_delimiter}<latent_keywords>{tuple_delimiter}<latent_strength>)
+5. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations, associations, raisonnements multi-hop et relations latentes identifiés aux étapes 1 à 4. Utilisez **{record_delimiter}** comme délimiteur de liste.
 
-7. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations, associations, raisonnements multi-hop et relations latentes identifiés aux étapes 1 à 6. Utilisez **{record_delimiter}** comme délimiteur de liste.
-
-8. Une fois terminé, affichez {completion_delimiter}
+6. Une fois terminé, affichez {completion_delimiter}
 
 ######################
 ---Examples---
@@ -240,25 +246,30 @@ Extrayez les informations suivantes de toutes les entités, paires d'entités et
 - Association_keywords: Mots-clés qui résument la nature globale de l’association d’ordre supérieur, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques.
 - Association_strength: Un score numérique indiquant la force de l’association entre les entités de l’ensemble.
 Formatez chaque association comme ("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}<entity_nameN>{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)
+2bis. **Raisonnement Multi-hop (PPR/HNSW)** :
+Identifiez toutes les chaînes de relations indirectes pertinentes impliquant **au moins trois entités connectées** (ex: A → B → C).
+- path_entities : Liste des entités formant le chemin
+- path_description : Explication du lien indirect
+- path_keywords : Thèmes/Concepts
+- path_strength : Score global , combinant les liens intermédiaires
+→ Format :
 
-5. Raisonnement multi-hop : identifiez les relations indirectes entre les entités qui sont connectées via une ou plusieurs entités intermédiaires (ex: A → B → C). Pour chaque chemin pertinent:
-- path_entities: liste ordonnée des noms des entités impliquées dans le raisonnement
-- path_description: explication de la chaîne de connexion
-- path_keywords: mots-clés résumant le type de raisonnement
-- path_strength: score global de fiabilité de la relation indirecte (de 0 à 1)
-Formatez chaque relation multi-hop comme ("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)
+("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)
 
-6. Relations latentes implicites : identifiez des paires d'entités qui ne sont pas explicitement reliées dans le texte, mais dont le lien implicite est fort d’après une analyse sémantique ou de contexte externe.
-- source_entity: entité source
-- target_entity: entité cible
-- latent_description: explication du lien supposé ou implicite
-- latent_keywords: concepts sémantiques ou liens thématiques
-- latent_strength: estimation numérique de la force de cette relation latente
-Formatez chaque relation implicite comme ("latent_relation"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<latent_description>{tuple_delimiter}<latent_keywords>{tuple_delimiter}<latent_strength>)
+**Relations latentes implicites** (optionnel) : Si certaines entités ne sont **pas directement connectées dans le texte**, mais qu’un raisonnement sémantique suggère une forte probabilité de lien :
+- source_entity
+- target_entity
+- description
+- keywords
+- estimated_strength
+→ Format :
 
-7. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations, associations, raisonnements multi-hop et relations latentes identifiés aux étapes 1 à 6. Utilisez **{record_delimiter}** comme délimiteur de liste.
+("latent_relation"{tuple_delimiter}<entity_1>{tuple_delimiter}<entity_2>{tuple_delimiter}<description>{tuple_delimiter}<keywords>{tuple_delimiter}<estimated_strength>)
 
-8. Une fois terminé, affichez {completion_delimiter}
+
+5. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations, associations, raisonnements multi-hop et relations latentes identifiés aux étapes 1 à 4. Utilisez **{record_delimiter}** comme délimiteur de liste.
+
+6. Une fois terminé, affichez {completion_delimiter}
 
 ---Output---
 
