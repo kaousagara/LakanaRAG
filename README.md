@@ -287,6 +287,9 @@ class QueryParam:
     top_k: int = int(os.getenv("TOP_K", "60"))
     """Number of top items to retrieve. Represents entities in 'local' mode and relationships in 'global' mode."""
 
+    page: int = 1
+    """Result page number for pagination."""
+
     max_token_for_text_unit: int = int(os.getenv("MAX_TOKEN_TEXT_CHUNK", "4000"))
     """Maximum number of tokens allowed for each retrieved text chunk."""
 

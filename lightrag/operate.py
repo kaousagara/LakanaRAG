@@ -1607,9 +1607,8 @@ async def _get_vector_context(
         compatible with _get_edge_data and _get_node_data format
     """
     try:
-        results = await chunks_vdb.query(
-            query, top_k=query_param.top_k, ids=query_param.ids
-        )
+        fetch_k = query_param.top_k * query_param.page
+        results = await chunks_vdb.query(query, top_k=fetch_k, ids=query_param.ids)
         if not results:
             return [], [], []
 
@@ -1633,6 +1632,8 @@ async def _get_vector_context(
             max_token_size=query_param.max_token_for_text_unit,
             tokenizer=tokenizer,
         )
+        offset = query_param.top_k * (query_param.page - 1)
+        maybe_trun_chunks = maybe_trun_chunks[offset : offset + query_param.top_k]
 
         logger.debug(
             f"Truncate chunks from {len(valid_chunks)} to {len(maybe_trun_chunks)} (max tokens:{query_param.max_token_for_text_unit})"
@@ -1823,9 +1824,9 @@ async def _get_node_data(
         f"Query nodes: {query}, top_k: {query_param.top_k}, cosine: {entities_vdb.cosine_better_than_threshold}"
     )
 
-    results = await entities_vdb.query(
-        query, top_k=query_param.top_k, ids=query_param.ids
-    )
+    # Support pagination by requesting more results then slicing
+    fetch_k = query_param.top_k * query_param.page
+    results = await entities_vdb.query(query, top_k=fetch_k, ids=query_param.ids)
 
     if not len(results):
         return "", "", ""
@@ -1872,6 +1873,8 @@ async def _get_node_data(
     node_datas = sorted(
         node_datas, key=lambda x: (x["rank"], x["connectivity"]), reverse=True
     )
+    offset = query_param.top_k * (query_param.page - 1)
+    node_datas = node_datas[offset : offset + query_param.top_k]
     # get entitytext chunk
     use_text_units = await _find_most_related_text_unit_from_entities(
         node_datas,
@@ -2162,8 +2165,9 @@ async def _get_edge_data(
         f"Query edges: {keywords}, top_k: {query_param.top_k}, cosine: {relationships_vdb.cosine_better_than_threshold}"
     )
 
+    fetch_k = query_param.top_k * query_param.page
     results = await relationships_vdb.query(
-        keywords, top_k=query_param.top_k, ids=query_param.ids
+        keywords, top_k=fetch_k, ids=query_param.ids
     )
 
     if not len(results):
@@ -2209,6 +2213,8 @@ async def _get_edge_data(
         key=lambda x: (x["rank"], x.get("weight", 0)),
         reverse=True,
     )
+    offset = query_param.top_k * (query_param.page - 1)
+    edge_datas = edge_datas[offset : offset + query_param.top_k]
     edge_datas = truncate_list_by_token_size(
         edge_datas,
         key=lambda x: x["description"] if x["description"] is not None else "",
