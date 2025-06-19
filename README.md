@@ -98,6 +98,7 @@ git clone https://github.com/HKUDS/LightRAG.git
 cd LightRAG
 cp env.example .env
 # modify LLM and Embedding settings in .env
+# configure Redis credentials via `REDIS_URI` and optional `EDIS_PASSWORD`
 docker compose up
 ```
 
