@@ -531,7 +531,7 @@ class BaseGraphStorage(StorageNameSpace, ABC):
 
     @abstractmethod
     async def get_knowledge_graph(
-        self, node_label: str, max_depth: int = 3, max_nodes: int = 1000
+        self, node_label: str, max_depth: int = 3, max_nodes: int = 1500
     ) -> KnowledgeGraph:
         """
         Retrieve a connected subgraph of nodes where the label includes the specified `node_label`.
@@ -539,7 +539,7 @@ class BaseGraphStorage(StorageNameSpace, ABC):
         Args:
             node_label: Label of the starting node，* means all nodes
             max_depth: Maximum depth of the subgraph, Defaults to 3
-            max_nodes: Maxiumu nodes to return, Defaults to 1000（BFS if possible)
+            max_nodes: Maxiumu nodes to return, Defaults to 1500（BFS if possible)
 
         Returns:
             KnowledgeGraph object containing nodes and edges, with an is_truncated flag
@@ -574,7 +574,7 @@ class BaseGraphStorage(StorageNameSpace, ABC):
             A list of dictionaries containing path information
         """
 
-        max_nodes = int(os.getenv("MAX_GRAPH_NODES", "1000"))
+        max_nodes = int(os.getenv("MAX_GRAPH_NODES", "1500"))
 
         kg = await self.get_knowledge_graph(
             start_node_id, max_depth=max_depth, max_nodes=max_nodes

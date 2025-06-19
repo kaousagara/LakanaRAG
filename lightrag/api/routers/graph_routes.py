@@ -49,7 +49,7 @@ def create_graph_routes(rag, api_key: Optional[str] = None):
     async def get_knowledge_graph(
         label: str = Query(..., description="Label to get knowledge graph for"),
         max_depth: int = Query(3, description="Maximum depth of graph", ge=1),
-        max_nodes: int = Query(1000, description="Maximum nodes to return", ge=1),
+        max_nodes: int = Query(1500, description="Maximum nodes to return", ge=1),
     ):
         """
         Retrieve a connected subgraph of nodes where the label includes the specified label.

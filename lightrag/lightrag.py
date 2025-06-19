@@ -533,14 +533,14 @@ class LightRAG:
         self,
         node_label: str,
         max_depth: int = 3,
-        max_nodes: int = 1000,
+        max_nodes: int = 1500,
     ) -> KnowledgeGraph:
         """Get knowledge graph for a given label
 
         Args:
             node_label (str): Label to get knowledge graph for
             max_depth (int): Maximum depth of graph
-            max_nodes (int, optional): Maximum number of nodes to return. Defaults to 1000.
+            max_nodes (int, optional): Maximum number of nodes to return. Defaults to 1500.
 
         Returns:
             KnowledgeGraph: Knowledge graph containing nodes and edges

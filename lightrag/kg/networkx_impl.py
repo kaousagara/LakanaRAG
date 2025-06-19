@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 # the OS environment variables take precedence over the .env file
 load_dotenv(dotenv_path=".env", override=False)
 
-MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1000))
+MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1500))
 
 
 @final
@@ -216,7 +216,7 @@ class NetworkXStorage(BaseGraphStorage):
         Args:
             node_label: Label of the starting node，* means all nodes
             max_depth: Maximum depth of the subgraph, Defaults to 3
-            max_nodes: Maxiumu nodes to return by BFS, Defaults to 1000
+            max_nodes: Maxiumu nodes to return by BFS, Defaults to 1500
 
         Returns:
             KnowledgeGraph object containing nodes and edges, with an is_truncated flag
