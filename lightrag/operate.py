@@ -45,6 +45,9 @@ from dotenv import load_dotenv
 # the OS environment variables take precedence over the .env file
 load_dotenv(dotenv_path=".env", override=False)
 
+# Limit concurrent Redis fetches to avoid exhausting connection pool
+CHUNK_FETCH_MAX_CONCURRENCY = 20
+
 
 def chunking_by_token_size(
     tokenizer: Tokenizer,
@@ -2372,11 +2375,13 @@ async def _find_related_text_unit_from_relationships(
         if dp["source_id"] is not None
     ]
     all_text_units_lookup = {}
+    semaphore = asyncio.Semaphore(CHUNK_FETCH_MAX_CONCURRENCY)
 
     async def fetch_chunk_data(c_id, index):
-        if c_id not in all_text_units_lookup:
+        if c_id in all_text_units_lookup:
+            return
+        async with semaphore:
             chunk_data = await text_chunks_db.get_by_id(c_id)
-            # Only store valid data
             if chunk_data is not None and "content" in chunk_data:
                 all_text_units_lookup[c_id] = {
                     "data": chunk_data,
