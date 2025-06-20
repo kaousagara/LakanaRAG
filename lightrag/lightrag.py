@@ -252,6 +252,21 @@ class LightRAG:
     enable_llm_cache_for_entity_extract: bool = field(default=True)
     """If True, enables caching for entity extraction steps to reduce LLM costs."""
 
+    enable_multi_hop: bool = field(
+        default=get_env_value("ENABLE_MULTI_HOP", True, bool)
+    )
+    """Toggle multi-hop reasoning features."""
+
+    enable_latent_relation: bool = field(
+        default=get_env_value("ENABLE_LATENT_RELATION", True, bool)
+    )
+    """Toggle latent relation handling."""
+
+    enable_association: bool = field(
+        default=get_env_value("ENABLE_ASSOCIATION", True, bool)
+    )
+    """Toggle association node generation."""
+
     # Extensions
     # ---
 

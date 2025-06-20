@@ -318,6 +318,9 @@ def parse_args() -> argparse.Namespace:
         "ENABLE_LLM_CACHE_FOR_EXTRACT", True, bool
     )
     args.enable_llm_cache = get_env_value("ENABLE_LLM_CACHE", True, bool)
+    args.enable_multi_hop = get_env_value("ENABLE_MULTI_HOP", True, bool)
+    args.enable_latent_relation = get_env_value("ENABLE_LATENT_RELATION", True, bool)
+    args.enable_association = get_env_value("ENABLE_ASSOCIATION", True, bool)
 
     # Inject LLM temperature configuration
     args.temperature = get_env_value("TEMPERATURE", 0.5, float)

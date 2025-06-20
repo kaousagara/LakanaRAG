@@ -922,29 +922,31 @@ async def merge_nodes_and_edges(
             if edge_data is not None:
                 relationships_data.append(edge_data)
 
-        for assoc in all_assocs:
-            assoc_node = await _merge_association_then_upsert(
-                assoc,
-                knowledge_graph_inst,
-                global_config,
-                pipeline_status,
-                pipeline_status_lock,
-                llm_response_cache,
-            )
-            associations_nodes.append(assoc_node)
+        if global_config.get("enable_association", True):
+            for assoc in all_assocs:
+                assoc_node = await _merge_association_then_upsert(
+                    assoc,
+                    knowledge_graph_inst,
+                    global_config,
+                    pipeline_status,
+                    pipeline_status_lock,
+                    llm_response_cache,
+                )
+                associations_nodes.append(assoc_node)
 
         multi_hop_edges_from_paths = []
-        for mh in all_multi_hops:
-            mh_node, mh_edges = await _merge_multi_hop_then_upsert(
-                mh,
-                knowledge_graph_inst,
-                global_config,
-                pipeline_status,
-                pipeline_status_lock,
-                llm_response_cache,
-            )
-            multi_hop_nodes.append(mh_node)
-            multi_hop_edges_from_paths.extend(mh_edges)
+        if global_config.get("enable_multi_hop", True):
+            for mh in all_multi_hops:
+                mh_node, mh_edges = await _merge_multi_hop_then_upsert(
+                    mh,
+                    knowledge_graph_inst,
+                    global_config,
+                    pipeline_status,
+                    pipeline_status_lock,
+                    llm_response_cache,
+                )
+                multi_hop_nodes.append(mh_node)
+                multi_hop_edges_from_paths.extend(mh_edges)
 
         # Update total counts
         total_entities_count = len(entities_data)
@@ -961,9 +963,15 @@ async def merge_nodes_and_edges(
 
         # Update vector databases with all collected data
         if entity_vdb is not None and (
-            entities_data or associations_nodes or multi_hop_nodes
+            entities_data
+            or (global_config.get("enable_association", True) and associations_nodes)
+            or (global_config.get("enable_multi_hop", True) and multi_hop_nodes)
         ):
-            all_nodes_data = entities_data + associations_nodes + multi_hop_nodes
+            all_nodes_data = entities_data
+            if global_config.get("enable_association", True):
+                all_nodes_data += associations_nodes
+            if global_config.get("enable_multi_hop", True):
+                all_nodes_data += multi_hop_nodes
             data_for_vdb = {
                 compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
                     "entity_name": dp["entity_name"],
@@ -986,9 +994,15 @@ async def merge_nodes_and_edges(
                 pipeline_status["history_messages"].append(log_message)
 
         if relationships_vdb is not None and (
-            relationships_data or multi_hop_edges_from_paths
+            relationships_data
+            or (
+                global_config.get("enable_multi_hop", True)
+                and multi_hop_edges_from_paths
+            )
         ):
-            combined_edges = relationships_data + multi_hop_edges_from_paths
+            combined_edges = relationships_data
+            if global_config.get("enable_multi_hop", True):
+                combined_edges += multi_hop_edges_from_paths
             data_for_vdb = {
                 compute_mdhash_id(e["src_id"] + e["tgt_id"], prefix="rel-"): {
                     "src_id": e["src_id"],
@@ -1004,59 +1018,60 @@ async def merge_nodes_and_edges(
             }
             await relationships_vdb.upsert(data_for_vdb)
 
-        # --------------------------------------------
-        # Multi-hop reasoning based on inserted nodes
-        # --------------------------------------------
-        multi_hop_edges = []
-        for ent in entities_data:
-            try:
-                paths = await knowledge_graph_inst.multi_hop_paths(
-                    ent["entity_name"], max_depth=3, top_k=3
-                )
-            except Exception as e:
-                logger.warning(
-                    f"multi_hop path search failed for {ent['entity_name']}: {e}"
-                )
-                continue
-
-            for p in paths:
-                if len(p["path_entities"]) < 2:
+        if global_config.get("enable_multi_hop", True):
+            # --------------------------------------------
+            # Multi-hop reasoning based on inserted nodes
+            # --------------------------------------------
+            multi_hop_edges = []
+            for ent in entities_data:
+                try:
+                    paths = await knowledge_graph_inst.multi_hop_paths(
+                        ent["entity_name"], max_depth=3, top_k=3
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"multi_hop path search failed for {ent['entity_name']}: {e}"
+                    )
                     continue
-                src = p["path_entities"][0]
-                tgt = p["path_entities"][-1]
-                edge_info = dict(
-                    weight=p["path_strength"],
-                    description=p["path_description"],
-                    keywords=p["path_keywords"],
-                    latent=True,
-                    source_id=ent.get("source_id", "multi_hop"),
-                    file_path=ent.get("file_path", file_path),
-                    created_at=int(time.time()),
-                )
-                await knowledge_graph_inst.upsert_edge(src, tgt, edge_info)
-                multi_hop_edges.append(
-                    {
-                        "src_id": src,
-                        "tgt_id": tgt,
-                        **edge_info,
-                    }
-                )
 
-        if relationships_vdb is not None and multi_hop_edges:
-            data_for_vdb = {
-                compute_mdhash_id(e["src_id"] + e["tgt_id"], prefix="rel-"): {
-                    "src_id": e["src_id"],
-                    "tgt_id": e["tgt_id"],
-                    "keywords": e["keywords"],
-                    "content": _truncate_content(
-                        f"{e['src_id']}\t{e['tgt_id']}\n{e['keywords']}\n{e['description']}"
-                    ),
-                    "source_id": e["source_id"],
-                    "file_path": e.get("file_path", "unknown_source"),
+                for p in paths:
+                    if len(p["path_entities"]) < 2:
+                        continue
+                    src = p["path_entities"][0]
+                    tgt = p["path_entities"][-1]
+                    edge_info = dict(
+                        weight=p["path_strength"],
+                        description=p["path_description"],
+                        keywords=p["path_keywords"],
+                        latent=True,
+                        source_id=ent.get("source_id", "multi_hop"),
+                        file_path=ent.get("file_path", file_path),
+                        created_at=int(time.time()),
+                    )
+                    await knowledge_graph_inst.upsert_edge(src, tgt, edge_info)
+                    multi_hop_edges.append(
+                        {
+                            "src_id": src,
+                            "tgt_id": tgt,
+                            **edge_info,
+                        }
+                    )
+
+            if relationships_vdb is not None and multi_hop_edges:
+                data_for_vdb = {
+                    compute_mdhash_id(e["src_id"] + e["tgt_id"], prefix="rel-"): {
+                        "src_id": e["src_id"],
+                        "tgt_id": e["tgt_id"],
+                        "keywords": e["keywords"],
+                        "content": _truncate_content(
+                            f"{e['src_id']}\t{e['tgt_id']}\n{e['keywords']}\n{e['description']}"
+                        ),
+                        "source_id": e["source_id"],
+                        "file_path": e.get("file_path", "unknown_source"),
+                    }
+                    for e in multi_hop_edges
                 }
-                for e in multi_hop_edges
-            }
-            await relationships_vdb.upsert(data_for_vdb)
+                await relationships_vdb.upsert(data_for_vdb)
 
 
 async def extract_entities(
@@ -1159,27 +1174,30 @@ async def extract_entities(
                 )
                 continue
 
-            if_latent = await _handle_single_latent_relation_extraction(
-                record_attributes, chunk_key, file_path
-            )
-            if if_latent is not None:
-                maybe_edges[(if_latent["src_id"], if_latent["tgt_id"])].append(
-                    if_latent
+            if global_config.get("enable_latent_relation", True):
+                if_latent = await _handle_single_latent_relation_extraction(
+                    record_attributes, chunk_key, file_path
                 )
-                continue
+                if if_latent is not None:
+                    maybe_edges[(if_latent["src_id"], if_latent["tgt_id"])].append(
+                        if_latent
+                    )
+                    continue
 
-            if_multi = await _handle_single_multi_hop_extraction(
-                record_attributes, chunk_key, file_path
-            )
-            if if_multi is not None:
-                maybe_multi_hops.append(if_multi)
-                continue
+            if global_config.get("enable_multi_hop", True):
+                if_multi = await _handle_single_multi_hop_extraction(
+                    record_attributes, chunk_key, file_path
+                )
+                if if_multi is not None:
+                    maybe_multi_hops.append(if_multi)
+                    continue
 
-            if_assoc = await _handle_single_association_extraction(
-                record_attributes, chunk_key, file_path
-            )
-            if if_assoc is not None:
-                maybe_assocs.append(if_assoc)
+            if global_config.get("enable_association", True):
+                if_assoc = await _handle_single_association_extraction(
+                    record_attributes, chunk_key, file_path
+                )
+                if if_assoc is not None:
+                    maybe_assocs.append(if_assoc)
 
         return maybe_nodes, maybe_edges, maybe_assocs, maybe_multi_hops
 
@@ -1387,6 +1405,7 @@ async def kg_query(
         text_chunks_db,
         query_param,
         chunks_vdb,
+        global_config,
     )
 
     if query_param.only_need_context:
@@ -1689,6 +1708,7 @@ async def _build_query_context(
     text_chunks_db: BaseKVStorage,
     query_param: QueryParam,
     chunks_vdb: BaseVectorStorage = None,  # Add chunks_vdb parameter for mix mode
+    global_config: dict | None = None,
 ):
     logger.info(f"Process {os.getpid()} building query context...")
 
@@ -1779,9 +1799,11 @@ async def _build_query_context(
     if not entities_context and not relations_context:
         return None
 
-    multi_hop_context = await _collect_multi_hop_paths(
-        entities_context, knowledge_graph_inst, top_k=query_param.top_k
-    )
+    multi_hop_context = []
+    if global_config is None or global_config.get("enable_multi_hop", True):
+        multi_hop_context = await _collect_multi_hop_paths(
+            entities_context, knowledge_graph_inst, top_k=query_param.top_k
+        )
 
     base_url = os.getenv("ENTITY_LINK_BASE_URL", DEFAULT_ENTITY_LINK_BASE_URL)
     (
@@ -2671,6 +2693,7 @@ async def kg_query_with_keywords(
         text_chunks_db,
         query_param,
         chunks_vdb=chunks_vdb,
+        global_config=global_config,
     )
     if not context:
         return PROMPTS["fail_response"]
