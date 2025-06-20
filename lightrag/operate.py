@@ -1406,6 +1406,7 @@ async def kg_query(
         query_param,
         chunks_vdb,
         global_config,
+        hashing_kv=hashing_kv,
     )
 
     if query_param.only_need_context:
@@ -1709,6 +1710,8 @@ async def _build_query_context(
     query_param: QueryParam,
     chunks_vdb: BaseVectorStorage = None,  # Add chunks_vdb parameter for mix mode
     global_config: dict | None = None,
+    hashing_kv: BaseKVStorage | None = None,
+    llm_response_cache: BaseKVStorage | None = None,
 ):
     logger.info(f"Process {os.getpid()} building query context...")
 
@@ -1720,6 +1723,8 @@ async def _build_query_context(
             entities_vdb,
             text_chunks_db,
             query_param,
+            global_config,
+            llm_response_cache,
         )
     elif query_param.mode == "global":
         entities_context, relations_context, text_units_context = await _get_edge_data(
@@ -1728,6 +1733,8 @@ async def _build_query_context(
             relationships_vdb,
             text_chunks_db,
             query_param,
+            global_config,
+            llm_response_cache,
         )
     else:  # hybrid or mix mode
         ll_data = await _get_node_data(
@@ -1736,6 +1743,8 @@ async def _build_query_context(
             entities_vdb,
             text_chunks_db,
             query_param,
+            global_config,
+            llm_response_cache,
         )
         hl_data = await _get_edge_data(
             f"{hl_keywords} {community}".strip(),
@@ -1743,6 +1752,8 @@ async def _build_query_context(
             relationships_vdb,
             text_chunks_db,
             query_param,
+            global_config,
+            llm_response_cache,
         )
 
         (
@@ -1802,7 +1813,12 @@ async def _build_query_context(
     multi_hop_context = []
     if global_config is None or global_config.get("enable_multi_hop", True):
         multi_hop_context = await _collect_multi_hop_paths(
-            entities_context, knowledge_graph_inst, top_k=query_param.top_k
+            entities_context,
+            knowledge_graph_inst,
+            top_k=query_param.top_k,
+            hashing_kv=hashing_kv,
+            min_strength=global_config.get("multi_hop_min_strength", 0.0),
+            keywords=query_param.hl_keywords + query_param.ll_keywords,
         )
 
     base_url = os.getenv("ENTITY_LINK_BASE_URL", DEFAULT_ENTITY_LINK_BASE_URL)
@@ -1853,6 +1869,8 @@ async def _get_node_data(
     entities_vdb: BaseVectorStorage,
     text_chunks_db: BaseKVStorage,
     query_param: QueryParam,
+    global_config: dict | None = None,
+    llm_response_cache: BaseKVStorage | None = None,
 ):
     # get similar entities
     logger.info(
@@ -1881,6 +1899,8 @@ async def _get_node_data(
                 query_param,
                 text_chunks_db,
                 knowledge_graph_inst,
+                global_config,
+                llm_response_cache,
             )
             use_relations = await _find_most_related_edges_from_entities(
                 node_datas,
@@ -1947,6 +1967,8 @@ async def _get_node_data(
         query_param,
         text_chunks_db,
         knowledge_graph_inst,
+        global_config,
+        llm_response_cache,
     )
     use_relations = await _find_most_related_edges_from_entities(
         node_datas,
@@ -2033,6 +2055,8 @@ async def _find_most_related_text_unit_from_entities(
     query_param: QueryParam,
     text_chunks_db: BaseKVStorage,
     knowledge_graph_inst: BaseGraphStorage,
+    global_config: dict | None = None,
+    llm_response_cache: BaseKVStorage | None = None,
 ):
     text_units = [
         split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
@@ -2135,8 +2159,22 @@ async def _find_most_related_text_unit_from_entities(
         f"Truncate chunks from {len(all_text_units_lookup)} to {len(all_text_units)} (max tokens:{query_param.max_token_for_text_unit})"
     )
 
-    all_text_units = [t["data"] for t in all_text_units]
-    return all_text_units
+    summary_tokens = 0
+    if global_config is not None:
+        summary_tokens = global_config.get("summary_to_max_tokens", 500)
+    summarized = []
+    for t in all_text_units:
+        if global_config is not None:
+            tok = tokenizer.encode(t["data"]["content"])
+            if len(tok) > summary_tokens:
+                t["data"]["content"] = await _handle_entity_relation_summary(
+                    "chunk",
+                    t["data"]["content"],
+                    global_config,
+                    llm_response_cache=llm_response_cache,
+                )
+        summarized.append(t["data"])
+    return summarized
 
 
 async def _find_most_related_edges_from_entities(
@@ -2226,6 +2264,8 @@ async def _get_edge_data(
     relationships_vdb: BaseVectorStorage,
     text_chunks_db: BaseKVStorage,
     query_param: QueryParam,
+    global_config: dict | None = None,
+    llm_response_cache: BaseKVStorage | None = None,
 ):
     logger.info(
         f"Query edges: {keywords}, top_k: {query_param.top_k}, cosine: {relationships_vdb.cosine_better_than_threshold}"
@@ -2504,25 +2544,62 @@ async def _collect_multi_hop_paths(
     entities_context: list[dict],
     knowledge_graph_inst: BaseGraphStorage,
     top_k: int = 5,
+    hashing_kv: BaseKVStorage | None = None,
+    min_strength: float = 0.0,
+    keywords: list[str] | None = None,
 ) -> list[dict]:
-    """Collect multi-hop paths for top entities using Personalized PageRank."""
+    """Collect multi-hop paths for entities with optional caching and ranking."""
 
     paths: list[dict] = []
+    keywords = [k.lower() for k in keywords] if keywords else []
+
     for ent in entities_context[:top_k]:
         ent_name = ent.get("entity") or ent.get("entity_name")
         if not ent_name:
             continue
-        try:
-            res = await knowledge_graph_inst.multi_hop_paths(
-                ent_name, max_depth=3, top_k=top_k
-            )
-        except Exception as e:
-            logger.warning(f"multi_hop retrieval failed for {ent_name}: {e}")
-            continue
-        paths.extend(res)
 
-    # Sort by strength and truncate
-    paths.sort(key=lambda x: x.get("path_strength", 0), reverse=True)
+        cache_key = compute_args_hash(ent_name, str(top_k), cache_type="multi_hop")
+        cached, _, _, _ = await handle_cache(
+            hashing_kv, cache_key, ent_name, mode="multi_hop", cache_type="multi_hop"
+        )
+        if cached is not None:
+            try:
+                res = json.loads(cached)
+            except Exception:
+                res = []
+        else:
+            try:
+                res = await knowledge_graph_inst.multi_hop_paths(
+                    ent_name, max_depth=3, top_k=top_k
+                )
+            except Exception as e:
+                logger.warning(f"multi_hop retrieval failed for {ent_name}: {e}")
+                continue
+            if hashing_kv is not None:
+                await save_to_cache(
+                    hashing_kv,
+                    CacheData(
+                        args_hash=cache_key,
+                        content=json.dumps(res, ensure_ascii=False),
+                        prompt=ent_name,
+                        mode="multi_hop",
+                        cache_type="multi_hop",
+                    ),
+                )
+
+        for p in res:
+            if p.get("path_strength", 0) >= min_strength:
+                paths.append(p)
+
+    def rank_key(p: dict) -> float:
+        score = p.get("path_strength", 0)
+        if keywords and p.get("path_keywords"):
+            kw_set = set(k.strip().lower() for k in p["path_keywords"].split(","))
+            overlap = len(set(keywords) & kw_set)
+            score += overlap * 0.1
+        return score
+
+    paths.sort(key=rank_key, reverse=True)
     return paths[:top_k]
 
 
@@ -2694,6 +2771,7 @@ async def kg_query_with_keywords(
         query_param,
         chunks_vdb=chunks_vdb,
         global_config=global_config,
+        hashing_kv=hashing_kv,
     )
     if not context:
         return PROMPTS["fail_response"]

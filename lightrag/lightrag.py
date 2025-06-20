@@ -25,6 +25,8 @@ from lightrag.constants import (
     DEFAULT_MAX_TOKEN_SUMMARY,
     DEFAULT_FORCE_LLM_SUMMARY_ON_MERGE,
     DEFAULT_ENTITY_LINK_BASE_URL,
+    DEFAULT_MULTI_HOP_MIN_STRENGTH,
+    DEFAULT_LATENT_REL_MIN_STRENGTH,
 )
 from lightrag.utils import get_env_value
 
@@ -257,10 +259,28 @@ class LightRAG:
     )
     """Toggle multi-hop reasoning features."""
 
+    multi_hop_min_strength: float = field(
+        default=get_env_value(
+            "MULTI_HOP_MIN_STRENGTH",
+            DEFAULT_MULTI_HOP_MIN_STRENGTH,
+            float,
+        )
+    )
+    """Minimum strength required for multi-hop paths."""
+
     enable_latent_relation: bool = field(
         default=get_env_value("ENABLE_LATENT_RELATION", True, bool)
     )
     """Toggle latent relation handling."""
+
+    latent_relation_min_strength: float = field(
+        default=get_env_value(
+            "LATENT_RELATION_MIN_STRENGTH",
+            DEFAULT_LATENT_REL_MIN_STRENGTH,
+            float,
+        )
+    )
+    """Minimum strength for latent relations."""
 
     enable_association: bool = field(
         default=get_env_value("ENABLE_ASSOCIATION", True, bool)

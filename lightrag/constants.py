@@ -22,3 +22,7 @@ DEFAULT_ENTITY_LINK_BASE_URL = "https://example.com/entity/"
 
 # Max content length for vector database fields to avoid oversized records
 MAX_VECTOR_CONTENT_LENGTH = 65000
+
+# Thresholds for graph relations
+DEFAULT_MULTI_HOP_MIN_STRENGTH = 0.5
+DEFAULT_LATENT_REL_MIN_STRENGTH = 0.5
