@@ -50,6 +50,7 @@ def get_default_host(binding_type: str) -> str:
             "https://api.openai.com/v1",
         ),
         "openai": os.getenv("LLM_BINDING_HOST", "https://api.openai.com/v1"),
+        "vllm": os.getenv("LLM_BINDING_HOST", "http://localhost:8000/v1"),
     }
     return default_hosts.get(
         binding_type, os.getenv("LLM_BINDING_HOST", "http://localhost:11434")
@@ -244,6 +245,7 @@ def parse_args() -> argparse.Namespace:
             "openai",
             "openai-ollama",
             "azure_openai",
+            "vllm",
         ],
         help="LLM binding type (default: from env or ollama)",
     )
