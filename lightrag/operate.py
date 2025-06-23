@@ -512,7 +512,7 @@ async def _merge_nodes_then_upsert(
     if entity_type.lower() == "géographie" and global_config.get(
         "enable_geo_enrichment"
     ):
-        from .utils.location_utils import get_location_info
+        from .utils import get_location_info
 
         geo_info = get_location_info(entity_name)
         if geo_info and "error" not in geo_info:
