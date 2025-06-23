@@ -321,6 +321,10 @@ def parse_args() -> argparse.Namespace:
     args.enable_multi_hop = get_env_value("ENABLE_MULTI_HOP", True, bool)
     args.enable_latent_relation = get_env_value("ENABLE_LATENT_RELATION", True, bool)
     args.enable_association = get_env_value("ENABLE_ASSOCIATION", True, bool)
+    args.enable_description_enrichment = get_env_value(
+        "ENABLE_DESCRIPTION_ENRICHMENT", False, bool
+    )
+    args.enable_geo_enrichment = get_env_value("ENABLE_GEO_ENRICHMENT", False, bool)
 
     # Inject LLM temperature configuration
     args.temperature = get_env_value("TEMPERATURE", 0.5, float)

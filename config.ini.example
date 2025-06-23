@@ -10,6 +10,8 @@ database = lightrag
 [redis]
 uri=redis://localhost:6379/1
 EDIS_PASSWORD=sagara01
+ENABLE_DESCRIPTION_ENRICHMENT=false
+ENABLE_GEO_ENRICHMENT=false
 ENTITY_LINK_BASE_URL=https://example.com/entity/
 [qdrant]
 uri = http://localhost:16333

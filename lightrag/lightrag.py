@@ -287,6 +287,16 @@ class LightRAG:
     )
     """Toggle association node generation."""
 
+    enable_description_enrichment: bool = field(
+        default=get_env_value("ENABLE_DESCRIPTION_ENRICHMENT", False, bool)
+    )
+    """If True, enrich entity descriptions via LLM."""
+
+    enable_geo_enrichment: bool = field(
+        default=get_env_value("ENABLE_GEO_ENRICHMENT", False, bool)
+    )
+    """If True, fetch geolocation details for geography entities."""
+
     # Extensions
     # ---
 

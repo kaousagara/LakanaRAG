@@ -493,6 +493,45 @@ async def _merge_nodes_then_upsert(
         )
     )
 
+    # Optionally enrich description using LLM
+    if global_config.get("enable_description_enrichment"):
+        use_llm_func: callable = global_config["llm_model_func"]
+        use_llm_func = partial(use_llm_func, _priority=7)
+        enrich_prompt = (
+            f"Complète la description suivante de l'entité nommée {entity_name}. "
+            f"Ajoute toute information manquante sur la date ou le lieu s'il y en a.\n"
+            f"Description: {description}"
+        )
+        description = await use_llm_func_with_cache(
+            enrich_prompt,
+            use_llm_func,
+            llm_response_cache=llm_response_cache,
+            cache_type="enrich_desc",
+        )
+
+    if entity_type.lower() == "géographie" and global_config.get(
+        "enable_geo_enrichment"
+    ):
+        from .utils.location_utils import get_location_info
+
+        geo_info = get_location_info(entity_name)
+        if geo_info and "error" not in geo_info:
+            loc_desc_parts = [
+                geo_info.get("pays"),
+                geo_info.get("region"),
+                geo_info.get("province"),
+                geo_info.get("departement"),
+                geo_info.get("commune"),
+            ]
+            loc_desc = "/".join([p for p in loc_desc_parts if p])
+            if loc_desc:
+                description = f"{description} ({loc_desc})"
+            gps_info = f"lat:{geo_info.get('latitude')} lon:{geo_info.get('longitude')}"
+            if additional_properties:
+                additional_properties += GRAPH_FIELD_SEP + gps_info
+            else:
+                additional_properties = gps_info
+
     force_llm_summary_on_merge = global_config["force_llm_summary_on_merge"]
 
     num_fragment = description.count(GRAPH_FIELD_SEP) + 1
