@@ -2597,7 +2597,13 @@ async def _collect_multi_hop_paths(
         if not ent_name:
             continue
 
-        cache_key = compute_args_hash(ent_name, str(top_k), cache_type="multi_hop")
+        cache_key = compute_args_hash(
+            ent_name,
+            str(top_k),
+            str(min_strength),
+            "-".join(sorted(keywords)) if keywords else "",
+            cache_type="multi_hop",
+        )
         cached, _, _, _ = await handle_cache(
             hashing_kv, cache_key, ent_name, mode="multi_hop", cache_type="multi_hop"
         )
