@@ -1770,27 +1770,50 @@ class TokenTracker:
         )
 
 
-def get_location_info(place_name: str) -> dict:
-    """Look up detailed location info from Nominatim."""
+def get_location_info(
+    place_name: str, country: str | None = None, region: str | None = None
+) -> dict:
+    """Return detailed geographic information for a place name.
+
+    The query prioritizes locations in Mali and optionally adds country and
+    region hints to improve accuracy.
+    """
+
     import requests
+
+    # Build the query string with optional hints
+    query_parts = [place_name]
+    if region:
+        query_parts.append(region)
+    if country:
+        query_parts.append(country)
+    query = ", ".join(query_parts)
 
     url = "https://nominatim.openstreetmap.org/search"
     params = {
-        "q": place_name,
+        "q": query,
         "format": "json",
         "addressdetails": 1,
-        "limit": 1,
+        "limit": 5,
     }
+
     try:
         response = requests.get(
             url, params=params, headers={"User-Agent": "geo-locator-script"}
         )
         response.raise_for_status()
         data = response.json()
+
         if not data:
-            return {"error": f"Aucune donnée trouvée pour {place_name}."}
-        location = data[0]
-        address = location.get("address", {})
+            return {"error": f"Aucune donnée trouvée pour '{query}'."}
+
+        # Prefer results located in Mali when available
+        mali_results = [
+            loc for loc in data if loc.get("address", {}).get("country_code") == "ml"
+        ]
+        selected = mali_results[0] if mali_results else data[0]
+        address = selected.get("address", {})
+
         lieu = (
             address.get("city")
             or address.get("town")
@@ -1800,6 +1823,7 @@ def get_location_info(place_name: str) -> dict:
             or address.get("neighbourhood")
             or place_name
         )
+
         result = {
             "lieu": lieu,
             "pays": address.get("country"),
@@ -1808,11 +1832,14 @@ def get_location_info(place_name: str) -> dict:
             "province": address.get("county") or address.get("region"),
             "departement": address.get("municipality") or address.get("district"),
             "commune": address.get("city_district") or address.get("suburb"),
-            "latitude": location.get("lat"),
-            "longitude": location.get("lon"),
-            "osm_type": location.get("type"),
-            "importance": location.get("importance"),
+            "latitude": selected.get("lat"),
+            "longitude": selected.get("lon"),
+            "osm_type": selected.get("type"),
+            "importance": selected.get("importance"),
+            "requete_utilisee": query,
         }
+
         return result
+
     except requests.RequestException as e:
         return {"error": f"Erreur de requête : {str(e)}"}
