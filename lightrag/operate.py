@@ -525,8 +525,8 @@ async def _merge_nodes_then_upsert(
             ]
             loc_desc = "/".join([p for p in loc_desc_parts if p])
             if loc_desc:
-                description = f"{description} ({loc_desc})"
-            gps_info = f"lat:{geo_info.get('latitude')} lon:{geo_info.get('longitude')}"
+                description = f"{description} ({loc_desc}:Latitude: {geo_info.get('latitude')} | Longitude: {geo_info.get('longitude')})"
+            gps_info = f"{entity_name} | Latitude: {geo_info.get('latitude')} | Longitude: {geo_info.get('longitude')}"
             if additional_properties:
                 additional_properties += GRAPH_FIELD_SEP + gps_info
             else:
