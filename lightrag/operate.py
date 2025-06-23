@@ -2041,12 +2041,18 @@ async def _get_node_data(
         # Get file path from node data
         file_path = n.get("file_path", "unknown_source")
 
+        desc = n.get("description", "UNKNOWN")
+        if n.get("additional_properties"):
+            desc += f"\n{n['additional_properties']}"
+        if n.get("entity_community"):
+            desc += f"\n{n['entity_community']}"
+
         entities_context.append(
             {
                 "id": i + 1,
                 "entity": n["entity_name"],
                 "type": n.get("entity_type", "UNKNOWN"),
-                "description": n.get("description", "UNKNOWN"),
+                "description": desc,
                 "rank": n["rank"],
                 "created_at": created_at,
                 "file_path": file_path,
@@ -2441,12 +2447,18 @@ async def _get_edge_data(
         # Get file path from node data
         file_path = n.get("file_path", "unknown_source")
 
+        desc = n.get("description", "UNKNOWN")
+        if n.get("additional_properties"):
+            desc += f"\n{n['additional_properties']}"
+        if n.get("entity_community"):
+            desc += f"\n{n['entity_community']}"
+
         entities_context.append(
             {
                 "id": i + 1,
                 "entity": n["entity_name"],
                 "type": n.get("entity_type", "UNKNOWN"),
-                "description": n.get("description", "UNKNOWN"),
+                "description": desc,
                 "rank": n["rank"],
                 "created_at": created_at,
                 "file_path": file_path,
