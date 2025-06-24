@@ -230,6 +230,11 @@ Si les descriptions fournies sont contradictoires, veuillez les résoudre et fou
 Veuillez vous assurer que le résumé est rédigé à la troisième personne et inclure les noms des entités afin que nous ayons un contexte complet.
 Utilisez {language} comme langue de sortie.
 
+---Méthode Tree of Thought---
+1. *Thought* : quelles informations clés ressortent de chaque description ?
+2. *Rationale* : comment ces informations se complètent-elles ou se contredisent-elles ?
+3. *Conclusion* : produisez un résumé unique intégrant toutes les informations utiles.
+
 #######
 ---Data---
 Entities: {entity_name}
