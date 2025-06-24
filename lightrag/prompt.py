@@ -20,69 +20,102 @@ PROMPTS["DEFAULT_ENTITY_TYPES"] = [
 
 PROMPTS["DEFAULT_USER_PROMPT"] = "n/a"
 
-PROMPTS["entity_extraction"] = """---Contexte---
-L'agence nationale de la sécurité d'état (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède  par la recherche et le traitement du renseignement, par la production des analyses.
-Vous êtes un analyste au sein de l’Agence nationale de la sécurité d’État (ANSE). Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
+PROMPTS["entity_extraction"] = """
+---Contexte---
+L'agence nationale de la sécurité d'État (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède par la recherche et le traitement du renseignement, ainsi que par la production d’analyses stratégiques.
+Vous êtes un analyste au sein de l’ANSE. Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
+
 ---Goal---
-Étant donné un document texte potentiellement pertinent pour cette activité et une liste de types d'entités, identifiez toutes les entités de ces types dans le texte et toutes les relations entre les entités identifiées.
-Utilisez {language} comme langue de sortie.
+À partir d’un document texte et d’une liste de types d’entités, appliquez un raisonnement **Tree of Thought (ToT)** pour extraire, relier et structurer les entités, relations, raisonnements indirects et regroupements stratégiques. Utilisez {language} comme langue de sortie.
 
----Etapes---
-1. Identifiez toutes les entités. Pour chaque entité identifiée, extrayez les informations suivantes:
-- entity_name: nom de l'entité, utilisez la même langue que le texte saisi. Si le nom est en anglais, mettez une majuscule.
+---Étapes structurées selon le raisonnement Tree of Thought (ToT)---
+
+1. **Détection des entités (ToT Step 1)**
+→ Pour chaque entité candidate :
+    - Thought: Quelle information de type entité semble émerger du texte ?
+    - Rationale: Pourquoi cette information est-elle une entité pertinente selon le contexte de l’ANSE ?
+    - Conclusion: Validez ou rejetez la détection. Si validée, extrayez les informations suivantes :
 - entity_type: l'un des types suivants : [{entity_types}]
-- entity_description: description complète des attributs et des activités de l'entité. Si une **information temporelle** (date, durée, moment historique, début de carrière, contexte d’âge, période de vie, etc.) est associée à l’activité ou à l’évolution de l’entité, **incorporez explicitement cet élément temporel dans la description de l’entité**.
+- entity_description: description complète des attributs et des activités de l'entité. Si une **information temporelle** (date, durée, moment historique, début de carrière, contexte d’âge, période de vie, etc.) est associée à l’activité ou à l’évolution de l’entité, **incorporez explicitement cet élément temporel dans la description de l’entité**. Si une personne est tuée ne parlez pas d'assassinat mais ne neutralisation sauf si c'est explicitement cité comme assassinat dans le texte.
 - additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
-entity_community: Communauté dans laquelle evolue l'entité (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precisée, ecrire "inconnue".
-Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)
+- entity_community: Communauté dans laquelle evolue l'entité (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precisée, ecrire "inconnue".
 
-2. À partir des entités identifiées à l'étape 1, identifiez toutes les paires (source_entity, target_entity) qui sont *clairement liées* les unes aux autres.
-Pour chaque paire d'entités liées, extrayez les informations suivantes:
+Formater chaque entité comme :
+**("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)**
+
+2. **Relations simples entre entités (ToT Step 2)**
+→ Pour chaque paire d'entités détectées :
+    - Thought: Existe-t-il un lien direct dans le texte entre ces deux entités ?
+    - Rationale: Justifiez la relation par des preuves ou signaux explicites.
+    - Conclusion: Si le lien est pertinent, extrayez :
 - source_entity: nom de l'entité source, tel qu'identifié à l'étape 1
 - target_entity: nom de l'entité cible, tel qu'identifié à l'étape 1
 - relationship_description: explication des raisons pour lesquelles vous pensez que l'entité source et l'entité cible sont liées l'une à l'autre
 - relationship_strength: un score numérique indiquant la force de la relation entre l'entité source et l'entité cible
 - relationship_keywords: un ou plusieurs mots clés de haut niveau qui résument la nature globale de la relation, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques
-Formatez chaque relation comme ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
 
-2bis. **Raisonnement Multi-hop (PPR/HNSW)** :
-Identifiez toutes les chaînes de relations indirectes pertinentes impliquant **au moins trois entités connectées** (ex: A → B → C).
+Formater chaque relation comme :
+**("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)**
+
+2bis. **Raisonnement Multi-hop (ToT Step 3)**
+→ Pour toute chaîne indirecte d’au moins trois entités :
+    - Thought: Quelles entités pourraient être liées par transitivité ou implication logique ?
+    - Rationale: Quelle cohérence thématique ou causale justifie ce lien indirect ?
+    - Conclusion: Si valide, extrayez :
 - path_entities : Liste des entités formant le chemin
 - path_description : Explication du lien indirect
 - path_keywords : Thèmes/Concepts
 - path_strength : Score global , combinant les liens intermédiaires
-→ Format :
 
-("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)
+Formater comme :
+**("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)**
 
-**Relations latentes implicites** (optionnel) : Si certaines entités ne sont **pas directement connectées dans le texte**, mais qu’un raisonnement sémantique suggère une forte probabilité de lien :
-- source_entity
-- target_entity
-- description
-- keywords
-- estimated_strength
-→ Format :
+**Relations latentes implicites (ToT Step 4)**
+→ Pour deux entités non directement liées dans le texte :
+    - Thought: Une relation implicite est-elle envisageable ?
+    - Rationale: Quel raisonnement sémantique permet de relier ces entités ?
+    - Conclusion: Si plausible, extrayez :
+      - source_entity
+      - target_entity
+      - description
+      - keywords
+      - estimated_strength
 
-("latent_relation"{tuple_delimiter}<entity_1>{tuple_delimiter}<entity_2>{tuple_delimiter}<description>{tuple_delimiter}<keywords>{tuple_delimiter}<estimated_strength>)
+Formater comme :
+**("latent_relation"{tuple_delimiter}<entity_1>{tuple_delimiter}<entity_2>{tuple_delimiter}<description>{tuple_delimiter}<keywords>{tuple_delimiter}<estimated_strength>)**
 
-3. Identifiez des mots-clés généraux qui résument les principaux concepts, thèmes ou sujets du texte. Ils doivent refléter les idées générales du document.
-Formatez les mots-clés de contenu comme suit ("content_keywords"{tuple_delimiter}<high_level_keywords>)
+3. **Mots-clés du contenu (ToT Step 5)**
+→ Analyse des thèmes généraux du texte :
+    - Thought: Quels concepts dominent le texte ?
+    - Rationale: Reposez-vous sur les entités et les relations identifiées
+    - Conclusion: Liste des mots-clés majeurs
 
-4. Pour les entités identifiées à l'étape 1, en vous basant sur les relations entre les paires d'entités à l'étape 2 et les mots-clés généraux extraits à l'étape 3, identifiez les connexions ou les points communs entre plusieurs entités et construisez autant que possible un ensemble d'entités associées d'ordre supérieur.
-(Remarque: Évitez de fusionner de force toutes les entités en une seule association. Si les mots-clés généraux ne sont pas fortement associés, construisez une association distincte.)
-Extrayez les informations suivantes de toutes les entités, paires d'entités et mots-clés généraux associés:
+Formater comme :
+**("content_keywords"{tuple_delimiter}<high_level_keywords>)**
 
-- entities_set: L'ensemble des noms des éléments d'un ensemble d'entités associées d'ordre supérieur, tel qu'identifié à l'étape 1.
-- Association_description: Utilisez les relations entre les entités de l'ensemble pour créer une description détaillée, fluide et complète qui couvre toutes les entités de l'ensemble, sans omettre aucune information pertinente.
-- Association_generalization: Résumez le contenu de l’ensemble d’entités aussi succinctement que possible.
-- Association_keywords: Mots-clés qui résument la nature globale de l’association d’ordre supérieur, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques.
-- Association_strength: Un score numérique indiquant la force de l’association entre les entités de l’ensemble.
-Formatez chaque association comme ("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}<entity_nameN>{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)
+4. **Regroupement d’entités en associations stratégiques (ToT Step 6)**
+→ Objectif : Identifier des ensembles d'entités significativement liées entre elles à partir des détails concrets du texte, des relations identifiées et des mots-clés thématiques.
+→ Pour chaque sous-ensemble cohérent d’entités :
+   - Thought : Quels groupes d’entités semblent interagir ou coexister selon les détails contextuels du document ?
+   - Rationale : Analysez les liens explicites (relations textuelles), les cooccurrences thématiques (via les mots-clés) et les similarités fonctionnelles (même rôle, même événement, même communauté, etc.). Ne regroupez des entités que si au moins deux types d’indicateurs (relation, thème, fonction) convergent.
+   - Conclusion : Si le regroupement est pertinent et justifié, générez une association enrichie.
+  Pour chaque association :
+   - entities_set : Liste des noms des entités composant le groupe, issues de l’étape 1.
+   - Association_description : Décrivez de manière fluide et détaillée l’ensemble, en intégrant les attributs, rôles et dynamiques de chaque entité, tels qu’ils apparaissent dans le texte. Évitez toute généralisation prématurée.
+   - Association_generalization : Résumez l’essence du regroupement en une phrase synthétique.
+   - Association_keywords : Sélectionnez des mots-clés qui capturent les connexions profondes (fonctionnelles, thématiques ou temporelles).
+   - Association_strength : Attribuez un score numérique reflétant la cohésion globale du groupe (degré d'interaction, proximité thématique, rôle commun, etc.).
 
+Formater comme :
+**("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}...{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)**
 
-5. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations, associations, raisonnements multi-hop et relations latentes identifiés aux étapes 1 à 4. Utilisez **{record_delimiter}** comme délimiteur de liste.
+5. **Rendu final (ToT Step 7)**
+→ Renvoyer la sortie en {language}
+→ Compilez les éléments extraits en une **liste unique** de toutes les entités, relations, raisonnements multi-hop, relations latentes et associations d’ordre supérieur.
+→ Utilisez {record_delimiter} comme séparateur entre les éléments.
 
-6. Une fois terminé, affichez {completion_delimiter}
+6. Terminez en affichant {completion_delimiter}
+
 
 ######################
 ---Examples---
@@ -211,65 +244,100 @@ MANY entities and relationships were missed in the last extraction.
 ---Remember Steps---
 
 ---Contexte---
-L'agence nationale de la sécurité d'état (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède  par la recherche et le traitement du renseignement, par la production des analyses.
-Vous êtes un analyste au sein de l’Agence nationale de la sécurité d’État (ANSE). Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
-Étant donné un document texte potentiellement pertinent pour cette activité et une liste de types d'entités, identifiez toutes les entités de ces types dans le texte et toutes les relations entre les entités identifiées.
-Utilisez {language} comme langue de sortie.
+L'agence nationale de la sécurité d'État (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède par la recherche et le traitement du renseignement, ainsi que par la production d’analyses stratégiques.
+Vous êtes un analyste au sein de l’ANSE. Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
 
----Etapes---
-1. Identifiez toutes les entités. Pour chaque entité identifiée, extrayez les informations suivantes:
-- entity_name: nom de l'entité, utilisez la même langue que le texte saisi. Si le nom est en anglais, mettez une majuscule.
+---Goal---
+À partir d’un document texte et d’une liste de types d’entités, appliquez un raisonnement **Tree of Thought (ToT)** pour extraire, relier et structurer les entités, relations, raisonnements indirects et regroupements stratégiques. Utilisez {language} comme langue de sortie.
+
+---Étapes structurées selon le raisonnement Tree of Thought (ToT)---
+
+1. **Détection des entités (ToT Step 1)**
+→ Pour chaque entité candidate :
+    - Thought: Quelle information de type entité semble émerger du texte ?
+    - Rationale: Pourquoi cette information est-elle une entité pertinente selon le contexte de l’ANSE ?
+    - Conclusion: Validez ou rejetez la détection. Si validée, extrayez les informations suivantes :
 - entity_type: l'un des types suivants : [{entity_types}]
-- entity_description: description complète des attributs et des activités de l'entité
+- entity_description: description complète des attributs et des activités de l'entité. Si une **information temporelle** (date, durée, moment historique, début de carrière, contexte d’âge, période de vie, etc.) est associée à l’activité ou à l’évolution de l’entité, **incorporez explicitement cet élément temporel dans la description de l’entité**. Si une personne est tuée ne parlez pas d'assassinat mais ne neutralisation sauf si c'est explicitement cité comme assassinat dans le texte.
 - additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
-Formater chaque entité comme suit ("entity" {tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>)
+- entity_community: Communauté dans laquelle evolue l'entité (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precisée, ecrire "inconnue".
 
-2. À partir des entités identifiées à l'étape 1, identifiez toutes les paires (source_entity, target_entity) qui sont *clairement liées* les unes aux autres.
-Pour chaque paire d'entités liées, extrayez les informations suivantes:
+Formater chaque entité comme :
+**("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)**
+
+2. **Relations simples entre entités (ToT Step 2)**
+→ Pour chaque paire d'entités détectées :
+    - Thought: Existe-t-il un lien direct dans le texte entre ces deux entités ?
+    - Rationale: Justifiez la relation par des preuves ou signaux explicites.
+    - Conclusion: Si le lien est pertinent, extrayez :
 - source_entity: nom de l'entité source, tel qu'identifié à l'étape 1
 - target_entity: nom de l'entité cible, tel qu'identifié à l'étape 1
 - relationship_description: explication des raisons pour lesquelles vous pensez que l'entité source et l'entité cible sont liées l'une à l'autre
 - relationship_strength: un score numérique indiquant la force de la relation entre l'entité source et l'entité cible
 - relationship_keywords: un ou plusieurs mots clés de haut niveau qui résument la nature globale de la relation, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques
-Formatez chaque relation comme ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
 
-3. Identifiez des mots-clés généraux qui résument les principaux concepts, thèmes ou sujets du texte. Ils doivent refléter les idées générales du document.
-Formatez les mots-clés de contenu comme suit ("content_keywords"{tuple_delimiter}<high_level_keywords>)
+Formater chaque relation comme :
+**("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)**
 
-4. Pour les entités identifiées à l'étape 1, en vous basant sur les relations entre les paires d'entités à l'étape 2 et les mots-clés généraux extraits à l'étape 3, identifiez les connexions ou les points communs entre plusieurs entités et construisez autant que possible un ensemble d'entités associées d'ordre supérieur.
-(Remarque: Évitez de fusionner de force toutes les entités en une seule association. Si les mots-clés généraux ne sont pas fortement associés, construisez une association distincte.)
-Extrayez les informations suivantes de toutes les entités, paires d'entités et mots-clés généraux associés:
-
-- entities_set: L'ensemble des noms des éléments d'un ensemble d'entités associées d'ordre supérieur, tel qu'identifié à l'étape 1.
-- Association_description: Utilisez les relations entre les entités de l'ensemble pour créer une description détaillée, fluide et complète qui couvre toutes les entités de l'ensemble, sans omettre aucune information pertinente.
-- Association_generalization: Résumez le contenu de l’ensemble d’entités aussi succinctement que possible.
-- Association_keywords: Mots-clés qui résument la nature globale de l’association d’ordre supérieur, en se concentrant sur des concepts ou des thèmes plutôt que sur des détails spécifiques.
-- Association_strength: Un score numérique indiquant la force de l’association entre les entités de l’ensemble.
-Formatez chaque association comme ("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}<entity_nameN>{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)
-2bis. **Raisonnement Multi-hop (PPR/HNSW)** :
-Identifiez toutes les chaînes de relations indirectes pertinentes impliquant **au moins trois entités connectées** (ex: A → B → C).
+2bis. **Raisonnement Multi-hop (ToT Step 3)**
+→ Pour toute chaîne indirecte d’au moins trois entités :
+    - Thought: Quelles entités pourraient être liées par transitivité ou implication logique ?
+    - Rationale: Quelle cohérence thématique ou causale justifie ce lien indirect ?
+    - Conclusion: Si valide, extrayez :
 - path_entities : Liste des entités formant le chemin
 - path_description : Explication du lien indirect
 - path_keywords : Thèmes/Concepts
 - path_strength : Score global , combinant les liens intermédiaires
-→ Format :
 
-("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)
+Formater comme :
+**("multi_hop"{tuple_delimiter}[<entity_1>, <entity_2>, ..., <entity_n>]{tuple_delimiter}<path_description>{tuple_delimiter}<path_keywords>{tuple_delimiter}<path_strength>)**
 
-**Relations latentes implicites** (optionnel) : Si certaines entités ne sont **pas directement connectées dans le texte**, mais qu’un raisonnement sémantique suggère une forte probabilité de lien :
-- source_entity
-- target_entity
-- description
-- keywords
-- estimated_strength
-→ Format :
+**Relations latentes implicites (ToT Step 4)**
+→ Pour deux entités non directement liées dans le texte :
+    - Thought: Une relation implicite est-elle envisageable ?
+    - Rationale: Quel raisonnement sémantique permet de relier ces entités ?
+    - Conclusion: Si plausible, extrayez :
+      - source_entity
+      - target_entity
+      - description
+      - keywords
+      - estimated_strength
 
-("latent_relation"{tuple_delimiter}<entity_1>{tuple_delimiter}<entity_2>{tuple_delimiter}<description>{tuple_delimiter}<keywords>{tuple_delimiter}<estimated_strength>)
+Formater comme :
+**("latent_relation"{tuple_delimiter}<entity_1>{tuple_delimiter}<entity_2>{tuple_delimiter}<description>{tuple_delimiter}<keywords>{tuple_delimiter}<estimated_strength>)**
 
+3. **Mots-clés du contenu (ToT Step 5)**
+→ Analyse des thèmes généraux du texte :
+    - Thought: Quels concepts dominent le texte ?
+    - Rationale: Reposez-vous sur les entités et les relations identifiées
+    - Conclusion: Liste des mots-clés majeurs
 
-5. Renvoyer la sortie en {language} sous la forme d'une liste unique de toutes les entités, relations, associations, raisonnements multi-hop et relations latentes identifiés aux étapes 1 à 4. Utilisez **{record_delimiter}** comme délimiteur de liste.
+Formater comme :
+**("content_keywords"{tuple_delimiter}<high_level_keywords>)**
 
-6. Une fois terminé, affichez {completion_delimiter}
+4. **Regroupement d’entités en associations stratégiques (ToT Step 6)**
+→ Objectif : Identifier des ensembles d'entités significativement liées entre elles à partir des détails concrets du texte, des relations identifiées et des mots-clés thématiques.
+→ Pour chaque sous-ensemble cohérent d’entités :
+   - Thought : Quels groupes d’entités semblent interagir ou coexister selon les détails contextuels du document ?
+   - Rationale : Analysez les liens explicites (relations textuelles), les cooccurrences thématiques (via les mots-clés) et les similarités fonctionnelles (même rôle, même événement, même communauté, etc.). Ne regroupez des entités que si au moins deux types d’indicateurs (relation, thème, fonction) convergent.
+   - Conclusion : Si le regroupement est pertinent et justifié, générez une association enrichie.
+  Pour chaque association :
+   - entities_set : Liste des noms des entités composant le groupe, issues de l’étape 1.
+   - Association_description : Décrivez de manière fluide et détaillée l’ensemble, en intégrant les attributs, rôles et dynamiques de chaque entité, tels qu’ils apparaissent dans le texte. Évitez toute généralisation prématurée.
+   - Association_generalization : Résumez l’essence du regroupement en une phrase synthétique.
+   - Association_keywords : Sélectionnez des mots-clés qui capturent les connexions profondes (fonctionnelles, thématiques ou temporelles).
+   - Association_strength : Attribuez un score numérique reflétant la cohésion globale du groupe (degré d'interaction, proximité thématique, rôle commun, etc.).
+
+Formater comme :
+**("Association"{tuple_delimiter}<entity_name1>{tuple_delimiter}<entity_name2>{tuple_delimiter}...{tuple_delimiter}<Association_description>{tuple_delimiter}<Association_generalization>{tuple_delimiter}<Association_keywords>{tuple_delimiter}<Association_strength>)**
+
+5. **Rendu final (ToT Step 7)**
+→ Renvoyer la sortie en {language}
+→ Compilez les éléments extraits en une **liste unique** de toutes les entités, relations, raisonnements multi-hop, relations latentes et associations d’ordre supérieur.
+→ Utilisez {record_delimiter} comme séparateur entre les éléments.
+
+6. Terminez en affichant {completion_delimiter}
+
 
 ---Output---
 
@@ -290,63 +358,113 @@ PROMPTS["fail_response"] = (
     "Sorry, I'm not able to provide an answer to that question.[no-context]"
 )
 
-PROMPTS["rag_response"] = """---Role---
-
+PROMPTS["rag_response"] = """
 ---Contexte---
-L'agence nationale de la sécurité d'état (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède  par la recherche et le traitement du renseignement, par la production des analyses.
-Vous êtes un analyste au sein de l’Agence nationale de la sécurité d’État (ANSE). Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
-Vous êtes etes chargé de répondre aux requêtes des utilisateurs sur le Knowledge Graph et les blocs de documents fournis au format JSON ci-dessous.
-
+L'Agence nationale de la sécurité d'État (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour ce faire, elle collecte, traite et analyse le renseignement stratégique.
+---Role---
+Vous êtes analyste au sein de l’ANSE, chargé de répondre aux requêtes des utilisateurs concernant le graphe de connaissance (Knowledge Graph) et les extraits de documents (document chunks) fournis au format JSON ci-dessous.
 
 ---Goal---
+Générez une réponse claire et rigoureuse à la requête utilisateur en appliquant le raisonnement **Tree of Thought (ToT)**. Utilisez les données du graphe et des documents pour construire votre réponse étape par étape, en tenant compte :
+- de l'historique de conversation
+- du contenu exact du graphe et des documents
+- des consignes de réponse
+N'introduisez **aucune information extérieure non justifiée par la base de connaissances fournie**.
 
-Générez une réponse claire et concise basée sur la base de connaissances et respectez les règles de réponse, en tenant compte à la fois de l'historique des conversations et de la requête en cours. Résumez toutes les informations de la base de connaissances fournie et intégrez les connaissances générales pertinentes. N'incluez pas d'informations non fournies par la base de connaissances.
+---Méthode de Raisonnement Tree of Thought (ToT)---
 
-Lors de la gestion des relations avec horodatage:
-1. Chaque relation possède un horodatage "created_at" indiquant la date d'acquisition de ces connaissances.
-2. En cas de relations conflictuelles, tenez compte à la fois du contenu sémantique et de l'horodatage.
-3. Ne privilégiez pas systématiquement les relations les plus récemment créées; tenez compte du contexte.
-4. Pour les requêtes temporelles, privilégiez les informations temporelles du contenu avant de considérer les horodatages de création.
-5. Eviter les répétions.
+Pour générer la réponse finale, appliquez les étapes suivantes :
 
----Conversation History---
+1. **Décomposition de la question utilisateur**
+   - *Thought*: Quel est le noyau informationnel de la requête ? (thème, entité, relation, type d'information attendue…)
+   - *Rationale*: Pourquoi cette requête est-elle formulée ainsi ? Quelle est l’intention implicite ?
+   - *Conclusion*: Reformulez la question en objectifs de recherche précis.
+
+2. **Recherche dans la base de connaissances (KG + Documents)**
+   - *Thought*: Quels éléments de données sont pertinents pour répondre à la question ?
+   - *Rationale*: Justifiez la sélection de chaque élément : lien direct à la question ? contexte proche ? rôle explicite ?
+   - *Conclusion*: Sélectionnez et notez les éléments pertinents, en distinguant :
+     - Éléments du Knowledge Graph (relations, entités, timestamps…)
+     - Éléments des documents (faits, citations, descriptions…)
+
+3. **Consolidation et traitement des données**
+   - *Thought*: Comment ces éléments se complètent-ils ? Y a-t-il des contradictions ?
+   - *Rationale*: Évaluez la cohérence temporelle, la validité sémantique, et l’harmonie contextuelle entre les données.
+   - *Conclusion*: Écartez les données faibles, fusionnez les sources convergentes, hiérarchisez les informations clés.
+
+4. **Génération de la réponse**
+   - *Thought*: Quelle structure de réponse permet une restitution claire et logique ?
+   - *Rationale*: Déterminez les sections utiles (introduction, développement thématique, points clés).
+   - *Conclusion*: Rédigez la réponse avec des transitions logiques, en respectant la langue du demandeur.
+
+5. **Sélection des sources**
+   - *Thought*: Quelles sources justifient le contenu de la réponse ?
+   - *Rationale*: Priorisez les documents ou relations les plus directement liés à chaque information affirmée.
+   - *Conclusion*: Listez jusqu’à 5 références avec format clair : [KG/DC] file_path
+
+---Données disponibles---
+**Historique de conversation**
 {history}
 
----Knowledge Graph and Document Chunks---
+**Graphe de connaissance et extraits de documents**
 {context_data}
 
----Response Rules---
+---Règles de réponse---
 
-- Target format and length: {response_type}
-- Use markdown formatting with appropriate section headings
-- Please respond in the same language as the user's question.
-- Ensure the response maintains continuity with the conversation history.
-- List up to 5 most important reference sources at the end under "References" section. Clearly indicating whether each source is from Knowledge Graph (KG) or Document Chunks (DC), and include the file path if available, in the following format: [KG/DC] file_path
-- If you don't know the answer, just say so.
-- Do not make anything up. Do not include information not provided by the Knowledge Base.
-- Addtional user prompt: {user_prompt}
+- Format cible : {response_type}
+- Utilisez un format Markdown avec titres hiérarchiques (ex. `## Résumé`, `### Analyse`, etc.)
+- Rédigez la réponse dans la langue de la question posée par l'utilisateur.
+- Respectez la cohérence de la conversation (contextualisation via l’historique).
+- Ne pas inventer d'informations. Ne pas extrapoler au-delà des données fournies.
+- Si l'information demandée est absente, répondez explicitement que vous ne disposez pas de cette donnée.
+- Évitez les répétitions.
+- Terminez par une section "### Références" listant jusqu’à 5 sources selon ce format :
+  `[KG/DC] file_path`
 
-Response:"""
+**Requête utilisateur**
+{user_prompt}
 
-PROMPTS["keywords_extraction"] = """---Role---
+---Réponse générée---
+"""
 
+PROMPTS["keywords_extraction"] = """
 ---Contexte---
-L'agence nationale de la sécurité d'état (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède  par la recherche et le traitement du renseignement, par la production des analyses.
-Vous êtes un analyste au sein de l’Agence nationale de la sécurité d’État (ANSE). Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
-Vous êtes chargé d'identifier les mots-clés de haut et de bas niveau dans l'historique des requêtes et des conversations de l'utilisateur.
+L'Agence nationale de la sécurité d'État (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Elle agit par la recherche, l’analyse et la structuration du renseignement stratégique.
+---Role---
+Vous êtes analyste au sein de l’ANSE. Votre mission est d’extraire les mots-clés les plus pertinents à partir de l’historique de requêtes et de conversations d’un utilisateur. Ces mots-clés alimenteront un moteur de recherche sémantique ou une base de connaissance stratégique.
 
 ---Goal---
 
-Compte tenu de l'historique des requêtes et des conversations, répertoriez les mots-clés généraux et de bas niveau. Les mots-clés généraux se concentrent sur des concepts ou des thèmes généraux, tandis que les mots-clés de bas niveau se concentrent sur des entités, des détails ou des termes concrets spécifiques.
+Appliquez un raisonnement **Tree of Thought (ToT)** pour identifier :
+- Les **mots-clés de haut niveau** : concepts, catégories thématiques, intentions implicites.
+- Les **mots-clés de bas niveau** : entités précises, événements, termes opérationnels ou concrets.
+- Les **communautés** concernées : domaine d’appartenance des thématiques détectées (Politique, Sécuritaire, Religieux, etc.)
+
+---Méthode ToT appliquée à l'extraction de mots-clés---
+
+1. **Décomposition du besoin utilisateur (ToT Step 1)**
+   - *Thought* : Que cherche l’utilisateur au fil de ses requêtes ?
+   - *Rationale* : Quelles intentions ou objectifs sous-jacents peut-on inférer ?
+   - *Conclusion* : Identifiez les axes majeurs d’intérêt (ex: surveillance d’acteurs, suivi d’événements, étude régionale, etc.)
+
+2. **Analyse des occurrences et thématiques (ToT Step 2)**
+   - *Thought* : Quels termes ou groupes de termes reviennent souvent dans l’historique ?
+   - *Rationale* : Ces répétitions révèlent-elles des concepts dominants (niveau haut) ou des détails récurrents (niveau bas) ?
+   - *Conclusion* : Classez les termes par type de mot-clé : haut niveau (idées abstraites) / bas niveau (éléments concrets)
+
+3. **Identification des communautés associées (ToT Step 3)**
+   - *Thought* : À quel(s) domaine(s) ou secteur(s) ces mots-clés appartiennent-ils ?
+   - *Rationale* : Utilisez les thèmes identifiés pour catégoriser selon les axes d’analyse de l’ANSE.
+   - *Conclusion* : Associez chaque mot-clé ou groupe de mots-clés à une ou plusieurs **communautés** (ex : Sécuritaire, Politique, Religieux…).
 
 ---Instructions---
 
-- Consider both the current query and relevant conversation history when extracting keywords
-- Output the keywords in JSON format, it will be parsed by a JSON parser, do not add any extra content in output
-- The JSON should have three keys:
-  - "high_level_keywords" for overarching concepts or themes
-  - "low_level_keywords" for specific entities or details
-  - "Community" for specific community
+- Prenez en compte à la fois la requête actuelle et l’historique de conversation
+- Sortez les résultats en **JSON strictement valide**, sans texte additionnel
+- Utilisez les trois clés suivantes dans le JSON :
+  - "high_level_keywords" : liste des mots-clés thématiques ou conceptuels (niveau abstrait)
+  - "low_level_keywords" : liste des entités, lieux, noms ou détails concrets (niveau opérationnel)
+  - "Community" : liste des domaines d’analyse ANSE auxquels les mots-clés sont reliés
 
 ######################
 ---Examples---
@@ -361,10 +479,10 @@ Conversation History:
 
 Current Query: {query}
 ######################
-The `Output` should be human text, not unicode characters. Keep the same language as `Query`.
-Output:
 
+Output:
 """
+
 
 PROMPTS["keywords_extraction_examples"] = [
     """Example 1:
@@ -402,43 +520,71 @@ Output:
 #############################""",
 ]
 
-PROMPTS["naive_rag_response"] = """---Role---
+PROMPTS["naive_rag_response_with_ToT"] = """
 
 ---Contexte---
-L'agence nationale de la sécurité d'état (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède  par la recherche et le traitement du renseignement, par la production des analyses.
-Vous êtes un analyste au sein de l’Agence nationale de la sécurité d’État (ANSE). Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
-Vous êtes chargé de répondre à la requête des utilisateurs sur les Document Chunks fournis au format JSON ci-dessous.
+L'Agence nationale de la sécurité d'État (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Elle agit par la collecte, le traitement et l’analyse du renseignement stratégique.
 
----Goal---
+---Rôle---
+Vous êtes analyste au sein de l’ANSE. Votre tâche consiste à répondre à une requête d'utilisateur à partir de **fragments de documents (Document Chunks)** fournis au format JSON. Vous devez produire une réponse rigoureuse, synthétique, et ancrée uniquement dans les documents transmis.
 
-Générez une réponse concise basée sur les fragments de document et respectez les règles de réponse, en tenant compte à la fois de l'historique des conversations et de la requête en cours. Résumez toutes les informations des fragments de document fournis et intégrez les connaissances générales pertinentes. N'incluez pas d'informations non fournies par Document Chunks.
+---Objectif---
 
-When handling content with timestamps:
-1. Each piece of content has a "created_at" timestamp indicating when we acquired this knowledge
-2. When encountering conflicting information, consider both the content and the timestamp
-3. Don't automatically prefer the most recent content - use judgment based on the context
-4. For time-specific queries, prioritize temporal information in the content before considering creation timestamps
+En vous appuyant exclusivement sur les Document Chunks fournis, appliquez un **raisonnement Tree of Thought (ToT)** pour :
+- Comprendre la demande utilisateur (même implicite)
+- Identifier et croiser les éléments pertinents dans les documents
+- Synthétiser les informations de façon claire et structurée
+- Produire une réponse complète sans extrapolation
+
+N’introduisez **aucune information extérieure**. Tous les éléments utilisés doivent provenir explicitement des Document Chunks.
+
+---Méthode de Raisonnement Tree of Thought (ToT)---
+
+1. **Analyse de la requête utilisateur (ToT Step 1)**
+   - *Thought* : Que cherche à savoir ou à comprendre l’utilisateur ?
+   - *Rationale* : Quelle est l’intention explicite ou implicite derrière la formulation de la requête ?
+   - *Conclusion* : Reformulez la requête sous forme d’un ou plusieurs objectifs concrets à atteindre dans la réponse.
+
+2. **Identification des informations pertinentes dans les Document Chunks (ToT Step 2)**
+   - *Thought* : Quels passages des documents sont liés à l’objectif de la requête ?
+   - *Rationale* : Pourquoi ces extraits sont-ils pertinents (mot-clé, entité mentionnée, date, contexte similaire…) ?
+   - *Conclusion* : Sélectionnez les fragments à utiliser. En cas de conflits, utilisez les critères suivants :
+     - Pertinence sémantique vis-à-vis de la question
+     - Fiabilité contextuelle (date, source, niveau de détail)
+
+3. **Structuration de la réponse (ToT Step 3)**
+   - *Thought* : Quel plan de réponse garantit la clarté et la logique ?
+   - *Rationale* : Organisez les informations selon leur nature (faits, explications, temporalité) pour faciliter la lecture.
+   - *Conclusion* : Rédigez la réponse en tenant compte du format demandé, du contexte conversationnel et des données sélectionnées.
+
+4. **Vérification des limites et ajout des sources (ToT Step 4)**
+   - *Thought* : Est-ce que toutes les informations incluses proviennent bien des Document Chunks ?
+   - *Rationale* : Vérifiez que rien n’a été inféré ou ajouté hors base.
+   - *Conclusion* : Si une réponse ne peut être donnée avec certitude, dites-le clairement. Ajoutez une section "Références" listant jusqu’à 5 sources utilisées.
 
 ---Conversation History---
 {history}
 
----Document Chunks(DC)---
+---Document Chunks (DC)---
 {content_data}
 
----Response Rules---
+---Règles de réponse---
 
-- Target format and length: {response_type}
-- Use markdown formatting with appropriate section headings
-- Please respond in the same language as the user's question.
-- Ensure the response maintains continuity with the conversation history.
-- List up to 5 most important reference sources at the end under "References" section. Clearly indicating each source from Document Chunks(DC), and include the file path if available, in the following format: [DC] file_path
-- If you don't know the answer, just say so.
-- Do not include information not provided by the Document Chunks.
-- Addtional user prompt: {user_prompt}
+- Format et longueur attendus : {response_type}
+- Utilisez une mise en forme Markdown avec des titres et sous-titres pertinents
+- Répondez dans la langue de la requête utilisateur
+- Assurez la continuité logique avec l’historique conversationnel
+- À la fin, incluez une section "**Références**" listant jusqu’à 5 sources, dans le format :
+  `[DC] file_path`
+- Si l’information n’est pas disponible dans les documents, dites-le clairement
+- Ne faites **aucune supposition ni ajout** extérieur aux données
+- Évitez les redites
+- Prompt utilisateur : {user_prompt}
 
-Response:"""
+---Réponse générée---
+"""
 
-# TODO: deprecated
+
 PROMPTS[
     "similarity_check"
 ] = """Please analyze the similarity between these two questions:
