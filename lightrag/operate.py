@@ -2019,7 +2019,7 @@ async def _get_node_data(
     len_node_datas = len(node_datas)
     node_datas = truncate_list_by_token_size(
         node_datas,
-        key=lambda x: x["description"] if x["description"] is not None else "",
+        key=lambda x: x.get("description", "") or "",
         max_token_size=query_param.max_token_for_local_context,
         tokenizer=tokenizer,
     )
