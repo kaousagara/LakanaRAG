@@ -38,7 +38,7 @@ Vous êtes un analyste au sein de l’ANSE. Votre mission est d’analyser un do
 - entity_type: l'un des types suivants : [{entity_types}]
 - entity_description: description complète des attributs et des activités de l'entité. Si une **information temporelle** (date, durée, moment historique, début de carrière, contexte d’âge, période de vie, etc.) est associée à l’activité ou à l’évolution de l’entité, **incorporez explicitement cet élément temporel dans la description de l’entité**. Si une personne est tuée ne parlez pas d'assassinat mais ne neutralisation sauf si c'est explicitement cité comme assassinat dans le texte.
 - additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
-- entity_community: Communauté dans laquelle evolue l'entité (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precisée, ecrire "inconnue".
+- entity_community: Domaine dans lequel evolue l'entite (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precise, ecrire "inconnue".
 
 Formater chaque entité comme :
 **("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)**
@@ -260,7 +260,7 @@ Vous êtes un analyste au sein de l’ANSE. Votre mission est d’analyser un do
 - entity_type: l'un des types suivants : [{entity_types}]
 - entity_description: description complète des attributs et des activités de l'entité. Si une **information temporelle** (date, durée, moment historique, début de carrière, contexte d’âge, période de vie, etc.) est associée à l’activité ou à l’évolution de l’entité, **incorporez explicitement cet élément temporel dans la description de l’entité**. Si une personne est tuée ne parlez pas d'assassinat mais ne neutralisation sauf si c'est explicitement cité comme assassinat dans le texte.
 - additional_properties: autres attributs éventuellement associés à l'entité, tels que le temps, l'espace, l'émotion, la motivation, etc.
-- entity_community: Communauté dans laquelle evolue l'entité (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precisée, ecrire "inconnue".
+- entity_community: Domaine dans lequel evolue l'entite (ex: Politique, Securitaire, Religeux, Economie, Sociologie etc.). Si non precise, ecrire "inconnue".
 
 Formater chaque entité comme :
 **("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>{tuple_delimiter}<additional_properties>{tuple_delimiter}<entity_community>)**
