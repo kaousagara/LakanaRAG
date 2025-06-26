@@ -100,6 +100,7 @@ cd LightRAG
 cp env.example .env
 # modify LLM and Embedding settings in .env
 # configure Redis credentials via `REDIS_URI` and optional `EDIS_PASSWORD`
+# enable community detection with `ENABLE_COMMUNITY_DETECTION=true`
 # tune multi-hop and latent relation thresholds via `MULTI_HOP_MIN_STRENGTH` and `LATENT_RELATION_MIN_STRENGTH`
 docker compose up
 ```

@@ -27,6 +27,7 @@ from lightrag.constants import (
     DEFAULT_ENTITY_LINK_BASE_URL,
     DEFAULT_MULTI_HOP_MIN_STRENGTH,
     DEFAULT_LATENT_REL_MIN_STRENGTH,
+    DEFAULT_ENABLE_COMMUNITY_DETECTION,
 )
 from lightrag.utils import get_env_value
 
@@ -296,6 +297,15 @@ class LightRAG:
         default=get_env_value("ENABLE_GEO_ENRICHMENT", False, bool)
     )
     """If True, fetch geolocation details for geography entities."""
+
+    enable_community_detection: bool = field(
+        default=get_env_value(
+            "ENABLE_COMMUNITY_DETECTION",
+            DEFAULT_ENABLE_COMMUNITY_DETECTION,
+            bool,
+        )
+    )
+    """If True, automatically detect communities after merges."""
 
     # Extensions
     # ---

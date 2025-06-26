@@ -256,4 +256,18 @@ def create_graph_routes(rag, api_key: Optional[str] = None):
             logger.error(traceback.format_exc())
             raise HTTPException(status_code=500, detail=str(e))
 
+    @router.post("/graph/community/recompute", dependencies=[Depends(combined_auth)])
+    async def recompute_communities():
+        try:
+            communities = await rag.chunk_entity_relation_graph.detect_communities()
+            for node_id, comm in communities.items():
+                await rag.chunk_entity_relation_graph.upsert_node(
+                    node_id, {"entity_community": comm}
+                )
+            return {"status": "success", "updated_nodes": len(communities)}
+        except Exception as e:
+            logger.error(f"Error computing communities: {e}")
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=str(e))
+
     return router

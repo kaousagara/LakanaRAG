@@ -14,7 +14,11 @@ if not pm.is_installed("networkx"):
 if not pm.is_installed("graspologic"):
     pm.install("graspologic")
 
+if not pm.is_installed("python-louvain"):
+    pm.install("python-louvain")
+
 import networkx as nx
+import community as community_louvain
 from .shared_storage import (
     get_storage_lock,
     get_update_flag,
@@ -418,6 +422,27 @@ class NetworkXStorage(BaseGraphStorage):
 
         paths.sort(key=lambda x: x["path_strength"], reverse=True)
         return paths[:top_k]
+
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        graph = await self._get_graph()
+        if graph.number_of_nodes() == 0:
+            return {}
+
+        nodes = list(graph.nodes)
+        if not nodes:
+            return {}
+
+        sub_nodes = set()
+        for n in nodes:
+            sub_nodes.update(
+                nx.single_source_shortest_path_length(graph, n, cutoff=max_depth).keys()
+            )
+            if len(sub_nodes) >= MAX_GRAPH_NODES:
+                break
+        subgraph = graph.subgraph(sub_nodes)
+
+        partition = community_louvain.best_partition(subgraph)
+        return {str(node): str(comm) for node, comm in partition.items()}
 
     async def index_done_callback(self) -> bool:
         """Save data to disk"""

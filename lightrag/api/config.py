@@ -325,6 +325,9 @@ def parse_args() -> argparse.Namespace:
         "ENABLE_DESCRIPTION_ENRICHMENT", False, bool
     )
     args.enable_geo_enrichment = get_env_value("ENABLE_GEO_ENRICHMENT", False, bool)
+    args.enable_community_detection = get_env_value(
+        "ENABLE_COMMUNITY_DETECTION", False, bool
+    )
 
     # Inject LLM temperature configuration
     args.temperature = get_env_value("TEMPERATURE", 0.5, float)

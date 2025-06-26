@@ -1258,6 +1258,9 @@ class MongoVectorDBStorage(BaseVectorStorage):
             logger.error(f"Error dropping vector storage {self._collection_name}: {e}")
             return {"status": "error", "message": str(e)}
 
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await super().detect_communities(max_depth)
+
 
 async def get_or_create_collection(db: AsyncIOMotorDatabase, collection_name: str):
     collection_names = await db.list_collection_names()

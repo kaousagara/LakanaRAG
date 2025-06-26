@@ -64,6 +64,7 @@ git clone https://github.com/HKUDS/LightRAG.git
 cd LightRAG
 cp env.example .env
 # modify LLM and Embedding settings in .env
+# 通过 `ENABLE_COMMUNITY_DETECTION=true` 开启社区检测
 # 通过 `MULTI_HOP_MIN_STRENGTH` 和 `LATENT_RELATION_MIN_STRENGTH` 调整多跳与潜在关系阈值
 docker compose up
 ```

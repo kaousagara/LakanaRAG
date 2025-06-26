@@ -2355,6 +2355,9 @@ class PGGraphStorage(BaseGraphStorage):
             logger.error(f"Error dropping graph: {e}")
             return {"status": "error", "message": str(e)}
 
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await super().detect_communities(max_depth)
+
 
 NAMESPACE_TABLE_MAP = {
     NameSpace.KV_STORE_FULL_DOCS: "LIGHTRAG_DOC_FULL",

@@ -711,3 +711,6 @@ class GremlinStorage(BaseGraphStorage):
         except Exception as e:
             logger.error(f"Error dropping graph {self.graph_name}: {e}")
             return {"status": "error", "message": str(e)}
+
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await super().detect_communities(max_depth)

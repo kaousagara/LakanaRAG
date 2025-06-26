@@ -628,6 +628,44 @@ class BaseGraphStorage(StorageNameSpace, ABC):
         paths.sort(key=lambda x: x["path_strength"], reverse=True)
         return paths[:top_k]
 
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        """Detect communities in the subgraph using Louvain clustering."""
+
+        max_nodes = int(os.getenv("MAX_GRAPH_NODES", "1500"))
+        kg = await self.get_knowledge_graph(
+            "*", max_depth=max_depth, max_nodes=max_nodes
+        )
+
+        g = nx.Graph()
+        for node in kg.nodes:
+            g.add_node(node.id)
+        for edge in kg.edges:
+            g.add_edge(edge.source, edge.target)
+
+        if g.number_of_nodes() == 0:
+            return {}
+
+        try:
+            import community as community_louvain
+        except Exception:  # pragma: no cover - install if missing
+            pm.install("python-louvain")
+            import community as community_louvain
+
+        try:
+            partition = community_louvain.best_partition(g)
+        except Exception:
+            try:
+                from networkx.algorithms.community import louvain_communities
+
+                communities = louvain_communities(g)
+                partition = {
+                    node: idx for idx, comm in enumerate(communities) for node in comm
+                }
+            except Exception:
+                return {}
+
+        return {str(n): str(c) for n, c in partition.items()}
+
 
 class DocStatus(str, Enum):
     """Document processing status"""
