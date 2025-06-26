@@ -275,12 +275,33 @@ const fetchGraph = async (label: string, maxDepth: number, maxNodes: number) => 
     const nodeIdMap: Record<string, number> = {}
     const edgeIdMap: Record<string, number> = {}
 
+    const communityCenters: Record<string, {x: number; y: number}> = {}
+    const communityList = Array.from(
+      new Set(
+        rawData.nodes.map((n: any) =>
+          n.properties?.entity_community || 'unknown'
+        )
+      )
+    )
+    const R = 0.35
+    communityList.forEach((comm, idx) => {
+      const angle = (2 * Math.PI * idx) / communityList.length
+      communityCenters[comm] = {
+        x: 0.5 + R * Math.cos(angle),
+        y: 0.5 + R * Math.sin(angle),
+      }
+    })
+
     for (let i = 0; i < rawData.nodes.length; i++) {
       const node = rawData.nodes[i]
       nodeIdMap[node.id] = i
 
-      node.x = Math.random()
-      node.y = Math.random()
+      const comm = node.properties?.entity_community || 'unknown'
+      const center = communityCenters[comm] || { x: Math.random(), y: Math.random() }
+      const offsetR = 0.1 * Math.random()
+      const offsetA = 2 * Math.PI * Math.random()
+      node.x = center.x + offsetR * Math.cos(offsetA)
+      node.y = center.y + offsetR * Math.sin(offsetA)
       node.degree = 0
       node.size = 10
     }
