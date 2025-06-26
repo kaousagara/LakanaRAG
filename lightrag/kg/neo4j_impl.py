@@ -286,7 +286,7 @@ class Neo4JStorage(BaseGraphStorage):
             database=self._DATABASE, default_access_mode="READ"
         ) as session:
             try:
-                query = "MATCH (n:base {entity_id: $entity_id}) RETURN n"
+                query = """MATCH (n:base) WITH n, apoc.text.jaroWinklerDistance(toLower(n.entity_id), toLower($entity_id)) AS similarity WHERE similarity > 0.85 RETURN n, similarity ORDER BY similarity DESC LIMIT 1"""
                 result = await session.run(query, entity_id=node_id)
                 try:
                     records = await result.fetch(
