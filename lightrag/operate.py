@@ -1875,29 +1875,16 @@ async def _build_query_context(
     multi_hop_str = json.dumps(multi_hop_prompt, ensure_ascii=False)
 
     result = f"""-----Entities(KG)-----
-
-```json
 {entities_str}
-```
 
 -----Relationships(KG)-----
-
-```json
 {relations_str}
-```
 
 -----Multi-hop Paths-----
-
-```json
 {multi_hop_str}
-```
 
 -----Document Chunks(DC)-----
-
-```json
 {text_units_str}
-```
-
 """
     return result
 
