@@ -633,6 +633,8 @@ await rag.apipeline_enqueue_documents(input)
 await rag.apipeline_process_enqueue_documents(input)
 ```
 
+当 `ENABLE_COMMUNITY_DETECTION=true` 时，管道会在合并节点后自动计算社区。
+
 </details>
 
 <details>

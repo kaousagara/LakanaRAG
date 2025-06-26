@@ -894,6 +894,17 @@ async def test_graph_special_characters(storage):
         return False
 
 
+async def test_detect_communities(storage):
+    """Test community detection on NetworkXStorage."""
+    await storage.drop()
+    await storage.upsert_node("A", {"entity_id": "A"})
+    await storage.upsert_node("B", {"entity_id": "B"})
+    await storage.upsert_edge("A", "B", {"relationship": "rel"})
+    communities = await storage.detect_communities()
+    assert isinstance(communities, dict)
+    assert "A" in communities and "B" in communities
+
+
 async def test_graph_undirected_property(storage):
     """
     专门测试图存储的无向图特性:
@@ -1120,11 +1131,12 @@ async def main():
         ASCIIColors.white("4. 无向图特性测试 (验证存储的无向图特性)")
         ASCIIColors.white("5. 特殊字符测试 (验证单引号、双引号和反斜杠等特殊字符)")
         ASCIIColors.white("6. 全部测试")
+        ASCIIColors.white("7. 社区检测测试")
 
-        choice = input("\n请输入选项 (1/2/3/4/5/6): ")
+        choice = input("\n请输入选项 (1/2/3/4/5/6/7): ")
 
         # 在执行测试前清理数据
-        if choice in ["1", "2", "3", "4", "5", "6"]:
+        if choice in ["1", "2", "3", "4", "5", "6", "7"]:
             ASCIIColors.yellow("\n执行测试前清理数据...")
             await storage.drop()
             ASCIIColors.green("数据清理完成\n")
@@ -1139,6 +1151,8 @@ async def main():
             await test_graph_undirected_property(storage)
         elif choice == "5":
             await test_graph_special_characters(storage)
+        elif choice == "7":
+            await test_detect_communities(storage)
         elif choice == "6":
             ASCIIColors.cyan("\n=== 开始基本测试 ===")
             basic_result = await test_graph_basic(storage)

@@ -358,6 +358,7 @@ LightRAG 支持绑定到各种 LLM/嵌入后端：
 
 ### 实体提取配置
 * ENABLE_LLM_CACHE_FOR_EXTRACT：为实体提取启用 LLM 缓存（默认：true）
+* ENABLE_COMMUNITY_DETECTION：在索引后启用图社区检测（默认：false）
 
 在测试环境中将 `ENABLE_LLM_CACHE_FOR_EXTRACT` 设置为 true 以减少 LLM 调用成本是很常见的做法。
 
@@ -457,6 +458,7 @@ WORKERS=2
 
 ### Settings for document indexing
 ENABLE_LLM_CACHE_FOR_EXTRACT=true
+ENABLE_COMMUNITY_DETECTION=false
 SUMMARY_LANGUAGE=Chinese
 MAX_PARALLEL_INSERT=2
 

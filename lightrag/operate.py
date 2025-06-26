@@ -784,6 +784,30 @@ async def merge_nodes_and_edges(
             }
             await relationships_vdb.upsert(data_for_vdb)
 
+        if global_config.get("enable_community_detection"):
+            communities = await knowledge_graph_inst.detect_communities()
+            node_updates = {}
+            for node_id, cid in communities.items():
+                node = await knowledge_graph_inst.get_node(node_id)
+                if node is None:
+                    continue
+                node["community"] = cid
+                await knowledge_graph_inst.upsert_node(node_id, node)
+                node_updates[node_id] = (node, cid)
+
+            if entity_vdb is not None and node_updates:
+                data_for_vdb = {
+                    compute_mdhash_id(nid, prefix="ent-"): {
+                        "entity_name": nid,
+                        "entity_type": nd[0].get("entity_type", "UNKNOWN"),
+                        "content": f"{nid}\n{nd[0].get('description','')}\n{nd[0].get('additional_properties','')}\n{nd[1]}",
+                        "source_id": nd[0].get("source_id"),
+                        "file_path": nd[0].get("file_path", "unknown_source"),
+                    }
+                    for nid, nd in node_updates.items()
+                }
+                await entity_vdb.upsert(data_for_vdb)
+
 
 async def extract_entities(
     chunks: dict[str, TextChunkSchema],
@@ -1604,6 +1628,7 @@ async def _get_node_data(
                 "entity": n["entity_name"],
                 "type": n.get("entity_type", "UNKNOWN"),
                 "description": n.get("description", "UNKNOWN"),
+                "community": n.get("community"),
                 "rank": n["rank"],
                 "created_at": created_at,
                 "file_path": file_path,
@@ -1983,6 +2008,7 @@ async def _get_edge_data(
                 "entity": n["entity_name"],
                 "type": n.get("entity_type", "UNKNOWN"),
                 "description": n.get("description", "UNKNOWN"),
+                "community": n.get("community"),
                 "rank": n["rank"],
                 "created_at": created_at,
                 "file_path": file_path,

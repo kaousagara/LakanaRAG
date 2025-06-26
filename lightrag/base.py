@@ -12,7 +12,7 @@ from typing import (
     TypeVar,
     Callable,
 )
-from .utils import EmbeddingFunc
+from .utils import EmbeddingFunc, logger
 from .types import KnowledgeGraph
 
 # use the .env that is inside the current folder
@@ -539,6 +539,54 @@ class BaseGraphStorage(StorageNameSpace, ABC):
     @abstractmethod
     async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
         """Return the shortest path length between two nodes. -1 if no path."""
+
+    @abstractmethod
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        """Detect communities for nodes in a subgraph.
+
+        Args:
+            max_depth: Depth used when retrieving the subgraph via `get_knowledge_graph`.
+
+        Returns:
+            Mapping of node_id to community_id.
+        """
+
+    async def _detect_communities_default(self, max_depth: int = 3) -> dict[str, str]:
+        """Default community detection using NetworkX's Louvain algorithm."""
+        import pipmaster as pm
+
+        if not pm.is_installed("networkx"):
+            pm.install("networkx")
+        if not pm.is_installed("python-louvain"):
+            pm.install("python-louvain")
+
+        import networkx as nx
+        from community import community_louvain
+
+        kg = await self.get_knowledge_graph("*", max_depth=max_depth)
+
+        g = nx.Graph()
+        for node in kg.nodes:
+            g.add_node(node.id)
+        for edge in kg.edges:
+            g.add_edge(edge.source, edge.target)
+
+        try:
+            if hasattr(nx.algorithms.community, "louvain_communities"):
+                communities = nx.algorithms.community.louvain_communities(g)
+                mapping = {}
+                for idx, comm in enumerate(communities):
+                    for n in comm:
+                        mapping[str(n)] = str(idx)
+            else:
+                mapping = {
+                    str(n): str(c)
+                    for n, c in community_louvain.best_partition(g).items()
+                }
+            return mapping
+        except Exception as e:
+            logger.error(f"Community detection failed: {e}")
+            return {}
 
 
 class DocStatus(str, Enum):
