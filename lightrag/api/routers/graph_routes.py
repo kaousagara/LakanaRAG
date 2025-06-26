@@ -25,6 +25,24 @@ class RelationUpdateRequest(BaseModel):
     updated_data: Dict[str, Any]
 
 
+class EntityCreateRequest(BaseModel):
+    entity_name: str
+    entity_data: Dict[str, Any]
+
+
+class RelationCreateRequest(BaseModel):
+    source_entity: str
+    target_entity: str
+    relation_data: Dict[str, Any]
+
+
+class MergeEntitiesRequest(BaseModel):
+    source_entities: list[str]
+    target_entity: str
+    merge_strategy: Optional[Dict[str, Any]] = None
+    target_entity_data: Optional[Dict[str, Any]] = None
+
+
 def create_graph_routes(rag, api_key: Optional[str] = None):
     combined_auth = get_combined_auth_dependency(api_key)
 
@@ -49,7 +67,7 @@ def create_graph_routes(rag, api_key: Optional[str] = None):
     async def get_knowledge_graph(
         label: str = Query(..., description="Label to get knowledge graph for"),
         max_depth: int = Query(3, description="Maximum depth of graph", ge=1),
-        max_nodes: int = Query(1000, description="Maximum nodes to return", ge=1),
+        max_nodes: int = Query(1500, description="Maximum nodes to return", ge=1),
     ):
         """
         Retrieve a connected subgraph of nodes where the label includes the specified label.
@@ -169,5 +187,73 @@ def create_graph_routes(rag, api_key: Optional[str] = None):
             raise HTTPException(
                 status_code=500, detail=f"Error updating relation: {str(e)}"
             )
+
+    @router.post("/graph/entity/create", dependencies=[Depends(combined_auth)])
+    async def create_entity(request: EntityCreateRequest):
+        try:
+            result = await rag.acreate_entity(request.entity_name, request.entity_data)
+            return {"status": "success", "data": result}
+        except Exception as e:
+            logger.error(f"Error creating entity '{request.entity_name}': {str(e)}")
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/graph/relation/create", dependencies=[Depends(combined_auth)])
+    async def create_relation(request: RelationCreateRequest):
+        try:
+            result = await rag.acreate_relation(
+                request.source_entity, request.target_entity, request.relation_data
+            )
+            return {"status": "success", "data": result}
+        except Exception as e:
+            logger.error(
+                f"Error creating relation between '{request.source_entity}' and '{request.target_entity}': {str(e)}"
+            )
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/graph/entities/merge", dependencies=[Depends(combined_auth)])
+    async def merge_entities(request: MergeEntitiesRequest):
+        try:
+            result = await rag.amerge_entities(
+                request.source_entities,
+                request.target_entity,
+                request.merge_strategy,
+                request.target_entity_data,
+            )
+            return {"status": "success", "data": result}
+        except Exception as e:
+            logger.error(
+                f"Error merging entities {request.source_entities} into '{request.target_entity}': {str(e)}"
+            )
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.delete("/graph/entity/{entity_name}", dependencies=[Depends(combined_auth)])
+    async def delete_entity(entity_name: str):
+        try:
+            await rag.adelete_by_entity(entity_name)
+            return {"status": "success", "message": f"Entity {entity_name} deleted"}
+        except Exception as e:
+            logger.error(f"Error deleting entity '{entity_name}': {str(e)}")
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.delete("/graph/relation", dependencies=[Depends(combined_auth)])
+    async def delete_relation(
+        source_entity: str = Query(...), target_entity: str = Query(...)
+    ):
+        try:
+            await rag.adelete_by_relation(source_entity, target_entity)
+            return {
+                "status": "success",
+                "message": f"Relation {source_entity}->{target_entity} deleted",
+            }
+        except Exception as e:
+            logger.error(
+                f"Error deleting relation between '{source_entity}' and '{target_entity}': {str(e)}"
+            )
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=str(e))
 
     return router

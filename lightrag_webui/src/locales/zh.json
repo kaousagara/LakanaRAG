@@ -161,7 +161,9 @@
       "unknown": "未知",
       "object": "物品",
       "group": "群组",
-      "technology": "技术"
+      "technology": "技术",
+      "association": "关联",
+      "multi_hop": "多跳"
     },
     "sideBar": {
       "settings": {

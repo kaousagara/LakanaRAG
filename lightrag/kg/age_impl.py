@@ -688,7 +688,7 @@ class AGEStorage(BaseGraphStorage):
     ) -> KnowledgeGraph:
         """
         Retrieve a connected subgraph of nodes where the label includes the specified 'node_label'.
-        Maximum number of nodes is constrained by the environment variable 'MAX_GRAPH_NODES' (default: 1000).
+        Maximum number of nodes is constrained by the environment variable 'MAX_GRAPH_NODES' (default: 1500).
         When reducing the number of nodes, the prioritization criteria are as follows:
             1. Label matching nodes take precedence (nodes containing the specified label string)
             2. Followed by nodes directly connected to the matching nodes
@@ -701,7 +701,7 @@ class AGEStorage(BaseGraphStorage):
         Returns:
             KnowledgeGraph: Complete connected subgraph for specified node
         """
-        max_graph_nodes = int(os.getenv("MAX_GRAPH_NODES", 1000))
+        max_graph_nodes = int(os.getenv("MAX_GRAPH_NODES", 1500))
         result = KnowledgeGraph()
         seen_nodes = set()
         seen_edges = set()
@@ -844,7 +844,9 @@ class AGEStorage(BaseGraphStorage):
         )
         return result
 
-    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+    async def shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
         query = f"""MATCH (a:base {{entity_id: '{source_node_id}'}}), (b:base {{entity_id: '{target_node_id}'}}),
                        p = shortestPath((a)-[*..15]-(b)) RETURN length(p) AS len"""
         try:

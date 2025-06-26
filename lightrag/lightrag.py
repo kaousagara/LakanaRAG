@@ -24,6 +24,9 @@ from typing import (
 from lightrag.constants import (
     DEFAULT_MAX_TOKEN_SUMMARY,
     DEFAULT_FORCE_LLM_SUMMARY_ON_MERGE,
+    DEFAULT_ENTITY_LINK_BASE_URL,
+    DEFAULT_MULTI_HOP_MIN_STRENGTH,
+    DEFAULT_LATENT_REL_MIN_STRENGTH,
 )
 from lightrag.utils import get_env_value
 
@@ -112,6 +115,11 @@ class LightRAG:
 
     doc_status_storage: str = field(default="JsonDocStatusStorage")
     """Storage type for tracking document processing statuses."""
+
+    entity_link_base_url: str = field(
+        default=os.getenv("ENTITY_LINK_BASE_URL", DEFAULT_ENTITY_LINK_BASE_URL)
+    )
+    """Base URL used to turn entity names into hyperlinks in responses."""
 
     # Logging (Deprecated, use setup_logger in utils.py instead)
     # ---
@@ -245,6 +253,49 @@ class LightRAG:
 
     enable_llm_cache_for_entity_extract: bool = field(default=True)
     """If True, enables caching for entity extraction steps to reduce LLM costs."""
+
+    enable_multi_hop: bool = field(
+        default=get_env_value("ENABLE_MULTI_HOP", True, bool)
+    )
+    """Toggle multi-hop reasoning features."""
+
+    multi_hop_min_strength: float = field(
+        default=get_env_value(
+            "MULTI_HOP_MIN_STRENGTH",
+            DEFAULT_MULTI_HOP_MIN_STRENGTH,
+            float,
+        )
+    )
+    """Minimum strength required for multi-hop paths."""
+
+    enable_latent_relation: bool = field(
+        default=get_env_value("ENABLE_LATENT_RELATION", True, bool)
+    )
+    """Toggle latent relation handling."""
+
+    latent_relation_min_strength: float = field(
+        default=get_env_value(
+            "LATENT_RELATION_MIN_STRENGTH",
+            DEFAULT_LATENT_REL_MIN_STRENGTH,
+            float,
+        )
+    )
+    """Minimum strength for latent relations."""
+
+    enable_association: bool = field(
+        default=get_env_value("ENABLE_ASSOCIATION", True, bool)
+    )
+    """Toggle association node generation."""
+
+    enable_description_enrichment: bool = field(
+        default=get_env_value("ENABLE_DESCRIPTION_ENRICHMENT", False, bool)
+    )
+    """If True, enrich entity descriptions via LLM."""
+
+    enable_geo_enrichment: bool = field(
+        default=get_env_value("ENABLE_GEO_ENRICHMENT", False, bool)
+    )
+    """If True, fetch geolocation details for geography entities."""
 
     # Extensions
     # ---
@@ -527,14 +578,14 @@ class LightRAG:
         self,
         node_label: str,
         max_depth: int = 3,
-        max_nodes: int = 1000,
+        max_nodes: int = 1500,
     ) -> KnowledgeGraph:
         """Get knowledge graph for a given label
 
         Args:
             node_label (str): Label to get knowledge graph for
             max_depth (int): Maximum depth of graph
-            max_nodes (int, optional): Maximum number of nodes to return. Defaults to 1000.
+            max_nodes (int, optional): Maximum number of nodes to return. Defaults to 1500.
 
         Returns:
             KnowledgeGraph: Knowledge graph containing nodes and edges

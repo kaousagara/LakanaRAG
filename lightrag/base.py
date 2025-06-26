@@ -15,6 +15,13 @@ from typing import (
 from .utils import EmbeddingFunc
 from .types import KnowledgeGraph
 
+import pipmaster as pm
+
+if not pm.is_installed("networkx"):
+    pm.install("networkx")
+
+import networkx as nx
+
 # use the .env that is inside the current folder
 # allows to use different .env file for each lightrag instance
 # the OS environment variables take precedence over the .env file
@@ -58,6 +65,9 @@ class QueryParam:
 
     top_k: int = int(os.getenv("TOP_K", "60"))
     """Number of top items to retrieve. Represents entities in 'local' mode and relationships in 'global' mode."""
+
+    page: int = 1
+    """Result page number for pagination. Starts from 1."""
 
     max_token_for_text_unit: int = int(os.getenv("MAX_TOKEN_TEXT_CHUNK", "4000"))
     """Maximum number of tokens allowed for each retrieved text chunk."""
@@ -521,7 +531,7 @@ class BaseGraphStorage(StorageNameSpace, ABC):
 
     @abstractmethod
     async def get_knowledge_graph(
-        self, node_label: str, max_depth: int = 3, max_nodes: int = 1000
+        self, node_label: str, max_depth: int = 3, max_nodes: int = 1500
     ) -> KnowledgeGraph:
         """
         Retrieve a connected subgraph of nodes where the label includes the specified `node_label`.
@@ -529,7 +539,7 @@ class BaseGraphStorage(StorageNameSpace, ABC):
         Args:
             node_label: Label of the starting node，* means all nodes
             max_depth: Maximum depth of the subgraph, Defaults to 3
-            max_nodes: Maxiumu nodes to return, Defaults to 1000（BFS if possible)
+            max_nodes: Maxiumu nodes to return, Defaults to 1500（BFS if possible)
 
         Returns:
             KnowledgeGraph object containing nodes and edges, with an is_truncated flag
@@ -537,8 +547,86 @@ class BaseGraphStorage(StorageNameSpace, ABC):
         """
 
     @abstractmethod
-    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+    async def shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
         """Return the shortest path length between two nodes. -1 if no path."""
+
+    async def multi_hop_paths(
+        self,
+        start_node_id: str,
+        max_depth: int = 3,
+        top_k: int = 5,
+    ) -> list[dict]:
+        """Return ranked multi-hop paths using Personalized PageRank.
+
+        This default implementation retrieves a subgraph using
+        :meth:`get_knowledge_graph` and performs path search with
+        ``networkx``. Storage backends with native graph algorithms can
+        override this method for better performance.
+
+        Args:
+            start_node_id: Starting node for path exploration
+            max_depth: Maximum depth of paths
+            top_k: Number of top paths to return
+
+        Returns:
+            A list of dictionaries containing path information
+        """
+
+        max_nodes = int(os.getenv("MAX_GRAPH_NODES", "1500"))
+
+        kg = await self.get_knowledge_graph(
+            start_node_id, max_depth=max_depth, max_nodes=max_nodes
+        )
+
+        graph = nx.Graph()
+        id_to_name: dict[str, str] = {}
+        for node in kg.nodes:
+            name = node.properties.get("entity_id", node.id)
+            graph.add_node(name, **node.properties)
+            id_to_name[node.id] = name
+        for edge in kg.edges:
+            src = id_to_name.get(edge.source, edge.source)
+            tgt = id_to_name.get(edge.target, edge.target)
+            graph.add_edge(src, tgt, **edge.properties)
+
+        if start_node_id not in graph:
+            return []
+
+        pr = nx.pagerank(graph, personalization={start_node_id: 1.0})
+        paths: list[dict] = []
+        for target in graph.nodes:
+            if target == start_node_id:
+                continue
+            for path in nx.all_simple_paths(
+                graph, source=start_node_id, target=target, cutoff=max_depth
+            ):
+                if len(path) < 3:
+                    continue
+                strength = sum(pr.get(n, 0) for n in path) / len(path)
+                keywords: list[str] = []
+                for src, tgt in zip(path[:-1], path[1:]):
+                    edge = graph.edges.get((src, tgt))
+                    if not edge:
+                        edge = graph.edges.get((tgt, src))
+                    if edge:
+                        k = edge.get("keywords")
+                        if isinstance(k, str):
+                            keywords.extend(k.split(","))
+                keyword_str = ", ".join(sorted(set(keywords)))
+                path_entities = [str(n) for n in path]
+                paths.append(
+                    {
+                        "path_entities": path_entities,
+                        "path_description": " -> ".join(path_entities),
+                        "path_keywords": keyword_str,
+                        "path_strength": strength,
+                    }
+                )
+
+        paths.sort(key=lambda x: x["path_strength"], reverse=True)
+        return paths[:top_k]
 
 
 class DocStatus(str, Enum):

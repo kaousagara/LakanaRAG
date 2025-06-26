@@ -9,9 +9,10 @@ body and a conclusion.
 It is a streamlined version of a larger internal tool and can be used as a
 reference for integrating LightRAG in custom async pipelines.
 """
+
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 import argparse
 import asyncio
 import json
@@ -36,7 +37,9 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gemma3:27b-it-q8_0")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "bge-m3:latest")
 CONCURRENCY_LIMIT = int(os.getenv("CONCURRENCY_LIMIT", "4"))
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 # Ensure working directory exists
 os.makedirs(WORKING_DIR, exist_ok=True)
@@ -74,11 +77,16 @@ async def initialize_rag() -> LightRAG:
         llm_model_name=LLM_MODEL,
         llm_model_max_async=4,
         llm_model_max_token_size=32768,
-        llm_model_kwargs={"host": "http://localhost:11434", "options": {"num_ctx": 32768}},
+        llm_model_kwargs={
+            "host": "http://localhost:11434",
+            "options": {"num_ctx": 32768},
+        },
         embedding_func=EmbeddingFunc(
             embedding_dim=1024,
             max_token_size=8192,
-            func=lambda texts: ollama_embed(texts, embed_model=EMBED_MODEL, host="http://localhost:11434"),
+            func=lambda texts: ollama_embed(
+                texts, embed_model=EMBED_MODEL, host="http://localhost:11434"
+            ),
         ),
     )
 
@@ -90,6 +98,7 @@ async def initialize_rag() -> LightRAG:
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
+
 
 def parse_json_response(response_text: str) -> Optional[Any]:
     """Parse a JSON response possibly wrapped in markdown fencing."""
@@ -106,7 +115,9 @@ async def ask_rag(query: str, prompt: str, mode: str, rag: LightRAG) -> str:
     """Send a query to LightRAG using the given mode."""
     async with _semaphore:
         try:
-            return await asyncio.to_thread(rag.query, query, QueryParam(mode=mode), prompt)
+            return await asyncio.to_thread(
+                rag.query, query, QueryParam(mode=mode), prompt
+            )
         except Exception as exc:
             logging.error("RAG query failed: %s", exc)
             return ""
@@ -130,7 +141,9 @@ async def verify_query(query: str, rag: LightRAG) -> str:
     return f"{query} {additional_info}".strip()
 
 
-async def generate_paragraphs(section_query: str, section_name: str, rag: LightRAG) -> str:
+async def generate_paragraphs(
+    section_query: str, section_name: str, rag: LightRAG
+) -> str:
     """Generate a short paragraph for the given section."""
     prompt = SECTION_PROMPT + (
         "\nRéponds à la requête en un paragraphe très concis sans mentionner les sources de données."
@@ -157,10 +170,13 @@ async def generate_report(query: str, rag: LightRAG) -> str:
 # Command line interface
 # ---------------------------------------------------------------------------
 
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Simple deep search demo")
     parser.add_argument("query", help="Sujet ou question de l'analyse")
-    parser.add_argument("--output", default="rapport_analyse.md", help="Fichier de sortie")
+    parser.add_argument(
+        "--output", default="rapport_analyse.md", help="Fichier de sortie"
+    )
     args = parser.parse_args()
 
     rag = await initialize_rag()

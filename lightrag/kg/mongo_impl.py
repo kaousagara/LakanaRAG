@@ -609,7 +609,9 @@ class MongoGraphStorage(BaseGraphStorage):
         edges = result[0].get("edges", [])
         return [(source_node_id, e["target"]) for e in edges]
 
-    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+    async def shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
         if source_node_id == target_node_id:
             return 0
 

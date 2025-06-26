@@ -376,7 +376,7 @@ Each storage type has several implementations:
 * KV_STORAGE supported implementations:
 
 ```
-JsonKVStorage    JsonFile (default)
+JsonKVStorage    JsonFile
 PGKVStorage      Postgres
 RedisKVStorage   Redis
 MongoKVStorage   MongoDB
@@ -385,7 +385,7 @@ MongoKVStorage   MongoDB
 * GRAPH_STORAGE supported implementations:
 
 ```
-NetworkXStorage      NetworkX (default)
+NetworkXStorage      NetworkX
 Neo4JStorage         Neo4J
 PGGraphStorage       PostgreSQL with AGE plugin
 ```
@@ -417,10 +417,10 @@ MongoDocStatusStorage       MongoDB
 You can select storage implementation by environment variables. You can set the following environment variables to a specific storage implementation name before the first start of the API Server:
 
 ```
-LIGHTRAG_KV_STORAGE=PGKVStorage
-LIGHTRAG_VECTOR_STORAGE=PGVectorStorage
-LIGHTRAG_GRAPH_STORAGE=PGGraphStorage
-LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
+LIGHTRAG_KV_STORAGE=JsonKVStorage
+LIGHTRAG_VECTOR_STORAGE=NanoVectorDBStorage
+LIGHTRAG_GRAPH_STORAGE=NetworkXStorage
+LIGHTRAG_DOC_STATUS_STORAGE=JsonDocStatusStorage
 ```
 
 You cannot change storage implementation selection after adding documents to LightRAG. Data migration from one storage implementation to another is not supported yet. For further information, please read the sample env file or config.ini file.
