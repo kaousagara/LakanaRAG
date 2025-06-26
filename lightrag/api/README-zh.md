@@ -394,9 +394,9 @@ PGGraphStorage       PostgreSQL with AGE plugin
 * VECTOR_STORAGE 支持的实现名称
 
 ```
-NanoVectorDBStorage         NanoVector(默认)
+NanoVectorDBStorage         NanoVector
 PGVectorStorage             Postgres
-MilvusVectorDBStorge        Milvus
+MilvusVectorDBStorge        Milvus(默认)
 ChromaVectorDBStorage       Chroma
 FaissVectorDBStorage        Faiss
 QdrantVectorDBStorage       Qdrant
@@ -416,10 +416,10 @@ MongoDocStatusStorage       MongoDB
 您可以通过环境变量选择存储实现。在首次启动 API 服务器之前，您可以将以下环境变量设置为特定的存储实现名称：
 
 ```
-LIGHTRAG_KV_STORAGE=JsonKVStorage
-LIGHTRAG_VECTOR_STORAGE=NanoVectorDBStorage
-LIGHTRAG_GRAPH_STORAGE=NetworkXStorage
-LIGHTRAG_DOC_STATUS_STORAGE=JsonDocStatusStorage
+LIGHTRAG_KV_STORAGE=RedisKVStorage
+LIGHTRAG_VECTOR_STORAGE=MilvusVectorDBStorage
+LIGHTRAG_GRAPH_STORAGE=Neo4JStorage
+LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
 ```
 
 在向 LightRAG 添加文档后，您不能更改存储实现选择。目前尚不支持从一个存储实现迁移到另一个存储实现。更多信息请阅读示例 env 文件或 config.ini 文件。
