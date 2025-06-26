@@ -359,6 +359,7 @@ Use environment variables `LLM_BINDING` or CLI argument `--llm-binding` to selec
 
 ### Entity Extraction Configuration
 * ENABLE_LLM_CACHE_FOR_EXTRACT: Enable LLM cache for entity extraction (default: true)
+* ENABLE_COMMUNITY_DETECTION: Enable graph community detection after indexing (default: false)
 
 It's very common to set `ENABLE_LLM_CACHE_FOR_EXTRACT` to true for a test environment to reduce the cost of LLM calls.
 
@@ -458,6 +459,7 @@ WORKERS=2
 
 ### Settings for document indexing
 ENABLE_LLM_CACHE_FOR_EXTRACT=true
+ENABLE_COMMUNITY_DETECTION=false
 SUMMARY_LANGUAGE=Chinese
 MAX_PARALLEL_INSERT=2
 

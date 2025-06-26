@@ -855,6 +855,9 @@ class AGEStorage(BaseGraphStorage):
             pass
         return -1
 
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await self._detect_communities_default(max_depth)
+
     async def index_done_callback(self) -> None:
         # AGES handles persistence automatically
         pass

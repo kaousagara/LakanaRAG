@@ -1057,6 +1057,9 @@ class Neo4JStorage(BaseGraphStorage):
                 return int(record["len"])
         return -1
 
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await self._detect_communities_default(max_depth)
+
     async def _robust_fallback(
         self, node_label: str, max_depth: int, max_nodes: int
     ) -> KnowledgeGraph:

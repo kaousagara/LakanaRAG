@@ -2341,6 +2341,9 @@ class PGGraphStorage(BaseGraphStorage):
 
         return await self._bfs_shortest_path_length(source_node_id, target_node_id)
 
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await self._detect_communities_default(max_depth)
+
     async def drop(self) -> dict[str, str]:
         """Drop the storage"""
         try:

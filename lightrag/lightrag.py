@@ -24,6 +24,7 @@ from typing import (
 from lightrag.constants import (
     DEFAULT_MAX_TOKEN_SUMMARY,
     DEFAULT_FORCE_LLM_SUMMARY_ON_MERGE,
+    DEFAULT_ENABLE_COMMUNITY_DETECTION,
 )
 from lightrag.utils import get_env_value
 
@@ -245,6 +246,15 @@ class LightRAG:
 
     enable_llm_cache_for_entity_extract: bool = field(default=True)
     """If True, enables caching for entity extraction steps to reduce LLM costs."""
+
+    enable_community_detection: bool = field(
+        default=get_env_value(
+            "ENABLE_COMMUNITY_DETECTION",
+            DEFAULT_ENABLE_COMMUNITY_DETECTION,
+            bool,
+        )
+    )
+    """Enable automatic community detection during indexing."""
 
     # Extensions
     # ---

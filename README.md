@@ -679,6 +679,9 @@ await rag.apipeline_enqueue_documents(input)
 await rag.apipeline_process_enqueue_documents(input)
 ```
 
+If `ENABLE_COMMUNITY_DETECTION=true` is set, the pipeline will automatically
+compute communities after merging nodes.
+
 </details>
 
 <details>

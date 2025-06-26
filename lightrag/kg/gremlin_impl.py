@@ -325,6 +325,9 @@ class GremlinStorage(BaseGraphStorage):
 
         return -1
 
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await self._detect_communities_default(max_depth)
+
     @retry(
         stop=stop_after_attempt(10),
         wait=wait_exponential(multiplier=1, min=4, max=10),

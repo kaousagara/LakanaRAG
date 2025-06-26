@@ -11,6 +11,7 @@ from lightrag.utils import get_env_value
 from lightrag.constants import (
     DEFAULT_WOKERS,
     DEFAULT_TIMEOUT,
+    DEFAULT_ENABLE_COMMUNITY_DETECTION,
 )
 
 # use the .env that is inside the current folder
@@ -339,6 +340,11 @@ def parse_args() -> argparse.Namespace:
         "ENABLE_LLM_CACHE_FOR_EXTRACT", True, bool
     )
     args.enable_llm_cache = get_env_value("ENABLE_LLM_CACHE", True, bool)
+    args.enable_community_detection = get_env_value(
+        "ENABLE_COMMUNITY_DETECTION",
+        DEFAULT_ENABLE_COMMUNITY_DETECTION,
+        bool,
+    )
 
     # Inject LLM temperature configuration
     args.temperature = get_env_value("TEMPERATURE", 0.5, float)

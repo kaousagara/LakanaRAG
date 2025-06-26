@@ -13,6 +13,8 @@ if not pm.is_installed("networkx"):
 
 if not pm.is_installed("graspologic"):
     pm.install("graspologic")
+if not pm.is_installed("python-louvain"):
+    pm.install("python-louvain")
 
 import networkx as nx
 from .shared_storage import (
@@ -364,6 +366,29 @@ class NetworkXStorage(BaseGraphStorage):
             return int(length)
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return -1
+
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        graph = await self._get_graph()
+        try:
+            if hasattr(nx.algorithms.community, "louvain_communities"):
+                communities = nx.algorithms.community.louvain_communities(graph)
+                mapping = {}
+                for idx, comm in enumerate(communities):
+                    for n in comm:
+                        mapping[str(n)] = str(idx)
+            else:
+                import community as community_louvain
+                mapping = {
+                    str(n): str(c)
+                    for n, c in community_louvain.best_partition(graph).items()
+                }
+            for node_id, cid in mapping.items():
+                if graph.has_node(node_id):
+                    graph.nodes[node_id]["community"] = cid
+            return mapping
+        except Exception as e:
+            logger.error(f"Community detection failed: {e}")
+            return {}
 
     async def index_done_callback(self) -> bool:
         """Save data to disk"""
