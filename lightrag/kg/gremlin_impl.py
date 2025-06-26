@@ -300,7 +300,9 @@ class GremlinStorage(BaseGraphStorage):
 
         return edges
 
-    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+    async def shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
         if source_node_id == target_node_id:
             return 0
 
@@ -463,7 +465,7 @@ class GremlinStorage(BaseGraphStorage):
     ) -> KnowledgeGraph:
         """
         Retrieve a connected subgraph of nodes where the entity_name includes the specified `node_label`.
-        Maximum number of nodes is constrained by the environment variable `MAX_GRAPH_NODES` (default: 1000).
+        Maximum number of nodes is constrained by the environment variable `MAX_GRAPH_NODES` (default: 1500).
 
         Args:
             node_label: Entity name of the starting node
@@ -476,8 +478,8 @@ class GremlinStorage(BaseGraphStorage):
         seen_nodes = set()
         seen_edges = set()
 
-        # Get maximum number of graph nodes from environment variable, default is 1000
-        MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1000))
+        # Get maximum number of graph nodes from environment variable, default is 1500
+        MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1500))
 
         entity_name = GremlinStorage._fix_name(node_label)
 

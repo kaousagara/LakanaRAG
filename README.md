@@ -55,6 +55,7 @@
 - [X] [2024.10.18]🎯📢We've added a link to a [LightRAG Introduction Video](https://youtu.be/oageL-1I0GE). Thanks to the author!
 - [X] [2024.10.17]🎯📢We have created a [Discord channel](https://discord.gg/yF2MmDJyGJ)! Welcome to join for sharing and discussions! 🎉🎉
 - [X] [2024.10.16]🎯📢LightRAG now supports [Ollama models](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#quick-start)!
+- [X] [2025.06.20]🎯📢LightRAG now supports running with a local [vLLM](https://github.com/vllm-project/vllm) server!
 - [X] [2024.10.15]🎯📢LightRAG now supports [Hugging Face models](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#quick-start)!
 
 <details>
@@ -98,6 +99,8 @@ git clone https://github.com/HKUDS/LightRAG.git
 cd LightRAG
 cp env.example .env
 # modify LLM and Embedding settings in .env
+# configure Redis credentials via `REDIS_URI` and optional `EDIS_PASSWORD`
+# tune multi-hop and latent relation thresholds via `MULTI_HOP_MIN_STRENGTH` and `LATENT_RELATION_MIN_STRENGTH`
 docker compose up
 ```
 
@@ -285,6 +288,9 @@ class QueryParam:
 
     top_k: int = int(os.getenv("TOP_K", "60"))
     """Number of top items to retrieve. Represents entities in 'local' mode and relationships in 'global' mode."""
+
+    page: int = 1
+    """Result page number for pagination."""
 
     max_token_for_text_unit: int = int(os.getenv("MAX_TOKEN_TEXT_CHUNK", "4000"))
     """Maximum number of tokens allowed for each retrieved text chunk."""
@@ -1468,6 +1474,31 @@ def get_summary(context, tot_tokens=2000):
 ```
 
 </details>
+
+### Step-2bis – Multi-hop Reasoning
+
+After generating queries, identify indirect chains of entities in the knowledge graph. Use
+Personalized PageRank (PPR) or HNSW search to explore paths such as `A → B → C`.
+For each path record:
+
+- `path_entities` – ordered list of entities
+- `path_description` – explanation of the indirect link
+- `path_keywords` – related concepts
+- `path_strength` – aggregated confidence score
+
+Format:
+
+```
+("multi_hop"<|>[<entity_1>, <entity_2>, ..., <entity_n>]<|><path_description><|><path_keywords><|><path_strength>)
+```
+
+Optionally add latent links:
+
+```
+("latent_relation"<|><entity_1><|><entity_2><|><description><|><keywords><|><estimated_strength>)
+```
+
+These multi-hop relations should be integrated into the graph and considered during vector search.
 
 ### Step-3 Query
 

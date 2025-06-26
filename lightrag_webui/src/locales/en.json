@@ -161,7 +161,9 @@
       "unknown": "Unknown",
       "object": "Object",
       "group": "Group",
-      "technology": "Technology"
+      "technology": "Technology",
+      "association": "Association",
+      "multi_hop": "Multi-Hop"
     },
     "sideBar": {
       "settings": {

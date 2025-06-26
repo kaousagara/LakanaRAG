@@ -15,11 +15,14 @@ const TYPE_SYNONYMS: Record<string, string> = {
   'unknown': 'unknown',
   '未知': 'unknown',
   'other': 'unknown',
+  'inconnu': 'unknown',
 
   'category': 'category',
   '类别': 'category',
   'type': 'category',
   '分类': 'category',
+  'categorie': 'category',
+  'catégorie': 'category',
 
   'organization': 'organization',
   '组织': 'organization',
@@ -27,17 +30,21 @@ const TYPE_SYNONYMS: Record<string, string> = {
   'company': 'organization',
   '公司': 'organization',
   '机构': 'organization',
+  'organisation': 'organization',
 
   'event': 'event',
   '事件': 'event',
   'activity': 'event',
   '活动': 'event',
+  'evenement': 'event',
+  'événement': 'event',
 
   'person': 'person',
   '人物': 'person',
   'people': 'person',
   'human': 'person',
   '人': 'person',
+  'personne': 'person',
 
   'animal': 'animal',
   '动物': 'animal',
@@ -48,6 +55,8 @@ const TYPE_SYNONYMS: Record<string, string> = {
   '地理': 'geo',
   'geography': 'geo',
   '地域': 'geo',
+  'geographie': 'geo',
+  'géographie': 'geo',
 
   'location': 'location',
   '地点': 'location',
@@ -79,24 +88,32 @@ const TYPE_SYNONYMS: Record<string, string> = {
   'group': 'group',
   '群组': 'group',
   'community': 'group',
-  '社区': 'group'
+  '社区': 'group',
+
+  'association': 'association',
+  'assocation': 'association',
+
+  'multi_hop': 'multi_hop',
+  'multi-hop': 'multi_hop'
 };
 
 // 节点类型到颜色的映射
 const NODE_TYPE_COLORS: Record<string, string> = {
-  'unknown': '#f4d371', // Yellow
-  'category': '#e3493b', // GoogleRed
-  'organization': '#0f705d', // Green
-  'event': '#00bfa0', // Turquoise
-  'person': '#4169E1', // RoyalBlue
+  'unknown': '#FFC0CB', // Pink
+  'category': '#FFFF99', // Light Yellow
+  'organization': '#FFA500', // Orange
+  'event': '#FF0000', // Red
+  'person': '#0000FF', // Blue
   'animal': '#84a3e1', // SkyBlue
-  'geo': '#ff99cc', // Pale Pink
+  'geo': '#008000', // Green
   'location': '#cf6d17', // Carrot
   'technology': '#b300b3', // Purple
   'equipment': '#2F4F4F', // DarkSlateGray
   'weapon': '#4421af', // DeepPurple
   'object': '#00cc00', // Green
   'group': '#0f558a', // NavyBlue
+  'association': '#800000', // Maroon
+  'multi_hop': '#808080', // Gray
 };
 
 // Extended colors pool - Used for unknown node types

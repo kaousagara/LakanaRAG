@@ -20,6 +20,7 @@
 - [X] [2024.10.18]🎯📢我们添加了[LightRAG介绍视频](https://youtu.be/oageL-1I0GE)的链接。感谢作者！
 - [X] [2024.10.17]🎯📢我们创建了一个[Discord频道](https://discord.gg/yF2MmDJyGJ)！欢迎加入分享和讨论！🎉🎉
 - [X] [2024.10.16]🎯📢LightRAG现在支持[Ollama模型](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#quick-start)！
+- [X] [2025.06.20]🎯📢LightRAG现已兼容本地[vLLM](https://github.com/vllm-project/vllm)服务器！
 - [X] [2024.10.15]🎯📢LightRAG现在支持[Hugging Face模型](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#quick-start)！
 
 <details>
@@ -63,6 +64,7 @@ git clone https://github.com/HKUDS/LightRAG.git
 cd LightRAG
 cp env.example .env
 # modify LLM and Embedding settings in .env
+# 通过 `MULTI_HOP_MIN_STRENGTH` 和 `LATENT_RELATION_MIN_STRENGTH` 调整多跳与潜在关系阈值
 docker compose up
 ```
 
@@ -243,6 +245,9 @@ class QueryParam:
 
     top_k: int = int(os.getenv("TOP_K", "60"))
     """Number of top items to retrieve. Represents entities in 'local' mode and relationships in 'global' mode."""
+
+    page: int = 1
+    """Result page number for pagination."""
 
     max_token_for_text_unit: int = int(os.getenv("MAX_TOKEN_TEXT_CHUNK", "4000"))
     """Maximum number of tokens allowed for each retrieved text chunk."""
