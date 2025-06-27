@@ -183,13 +183,11 @@ async def _handle_single_entity_extraction(
     entity_description = clean_str(record_attributes[3])
     entity_description = normalize_extracted_info(entity_description)
 
-    additional_properties = normalize_extracted_info(
-        clean_str(record_attributes[4])
-    )
+    additional_properties = normalize_extracted_info(clean_str(record_attributes[4]))
 
-    entity_community = normalize_extracted_info(
-        clean_str(record_attributes[5])
-    ) or "inconnue"
+    entity_community = (
+        normalize_extracted_info(clean_str(record_attributes[5])) or "inconnue"
+    )
 
     if not entity_description.strip():
         logger.warning(
@@ -337,12 +335,18 @@ async def _merge_nodes_then_upsert(
 
     additional_properties = GRAPH_FIELD_SEP.join(
         sorted(
-            set([dp.get("additional_properties", "") for dp in nodes_data] + already_additional_properties)
+            set(
+                [dp.get("additional_properties", "") for dp in nodes_data]
+                + already_additional_properties
+            )
         )
     )
     entity_community = GRAPH_FIELD_SEP.join(
         sorted(
-            set([dp.get("entity_community", "inconnue") for dp in nodes_data] + already_entity_communities)
+            set(
+                [dp.get("entity_community", "inconnue") for dp in nodes_data]
+                + already_entity_communities
+            )
         )
     )
 
@@ -504,9 +508,10 @@ async def _merge_edges_then_upsert(
                 need_insert_id,
                 node_data={
                     "entity_id": need_insert_id,
-                    "source_id": source_id,
-                    "description": description,
                     "entity_type": "UNKNOWN",
+                    "entity_community": "inconnue",
+                    "description": description,
+                    "source_id": source_id,
                     "file_path": file_path,
                     "created_at": int(time.time()),
                 },
@@ -1553,12 +1558,16 @@ async def _get_node_data(
         for other in node_datas:
             if nd["entity_name"] == other["entity_name"]:
                 continue
-            length = await knowledge_graph_inst.shortest_path_length(nd["entity_name"], other["entity_name"])
+            length = await knowledge_graph_inst.shortest_path_length(
+                nd["entity_name"], other["entity_name"]
+            )
             if length != -1:
                 score += 1 / (length + 1)
         nd["connectivity"] = score
 
-    node_datas = sorted(node_datas, key=lambda x: (x["rank"], x["connectivity"]), reverse=True)
+    node_datas = sorted(
+        node_datas, key=lambda x: (x["rank"], x["connectivity"]), reverse=True
+    )
     # get entitytext chunk
     use_text_units = await _find_most_related_text_unit_from_entities(
         node_datas,
@@ -1653,9 +1662,9 @@ async def _find_most_related_text_unit_from_entities(
     knowledge_graph_inst: BaseGraphStorage,
 ):
     text_units = [
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
+        split_string_by_multi_markers(dp.get("source_id", ""), [GRAPH_FIELD_SEP])
         for dp in node_datas
-        if dp["source_id"] is not None
+        if dp.get("source_id") is not None
     ]
 
     node_names = [dp["entity_name"] for dp in node_datas]
@@ -1806,7 +1815,7 @@ async def _find_most_related_edges_from_entities(
                     continue
                 l1 = await knowledge_graph_inst.shortest_path_length(pair[0], ent)
                 l2 = await knowledge_graph_inst.shortest_path_length(pair[1], ent)
-                lengths = [l for l in (l1, l2) if l != -1]
+                lengths = [length for length in (l1, l2) if length != -1]
                 if lengths:
                     connectivity += 1 / (min(lengths) + 1)
 
@@ -1924,7 +1933,7 @@ async def _get_edge_data(
                 continue
             l1 = await knowledge_graph_inst.shortest_path_length(e["src_id"], ent)
             l2 = await knowledge_graph_inst.shortest_path_length(e["tgt_id"], ent)
-            lengths = [l for l in (l1, l2) if l != -1]
+            lengths = [length for length in (l1, l2) if length != -1]
             if lengths:
                 score += 1 / (min(lengths) + 1)
         e["connectivity"] = score
@@ -2057,9 +2066,9 @@ async def _find_related_text_unit_from_relationships(
     knowledge_graph_inst: BaseGraphStorage,
 ):
     text_units = [
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
+        split_string_by_multi_markers(dp.get("source_id", ""), [GRAPH_FIELD_SEP])
         for dp in edge_datas
-        if dp["source_id"] is not None
+        if dp.get("source_id") is not None
     ]
     all_text_units_lookup = {}
 
@@ -2389,7 +2398,9 @@ async def query_with_keywords(
     )
 
     # Create a new string with the prompt and the keywords
-    keywords_str = ", ".join(ll_keywords + hl_keywords + ([community] if community else []))
+    keywords_str = ", ".join(
+        ll_keywords + hl_keywords + ([community] if community else [])
+    )
     formatted_question = (
         f"{prompt}\n\n### Keywords\n\n{keywords_str}\n\n### Query\n\n{query}"
     )
