@@ -315,7 +315,7 @@
       "parametersTitle": "參數",
       "parametersDescription": "設定查詢參數",
       "queryMode": "查詢模式",
-      "queryModeTooltip": "選擇檢索策略：\n• Naive：基礎搜尋，無進階技術\n• Local：上下文相關資訊檢索\n• Global：利用全域知識庫\n• Hybrid：結合本地和全域檢索\n• Mix：整合知識圖譜和向量檢索\n• Bypass：直接傳遞查詢到LLM，不進行檢索\n• Analyste：使用分析專家小組\n• Deepsearch：多步檢索並產生PDF報告",
+      "queryModeTooltip": "選擇檢索策略：\n• Naive：基礎搜尋，無進階技術\n• Local：上下文相關資訊檢索\n• Global：利用全域知識庫\n• Hybrid：結合本地和全域檢索\n• Mix：整合知識圖譜和向量檢索\n• Bypass：直接傳遞查詢到LLM，不進行檢索\n• 分析師模式：使用分析專家小組\n• Deepsearch：多步檢索並產生PDF報告",
       "queryModeOptions": {
         "naive": "Naive",
         "local": "Local",
