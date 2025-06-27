@@ -1119,7 +1119,12 @@ async def merge_nodes_and_edges(
                 node = await knowledge_graph_inst.get_node(node_id)
                 entity_type = node.get("entity_type", "UNKNOWN") if node else "UNKNOWN"
                 await knowledge_graph_inst.upsert_node(
-                    node_id, {"entity_type": entity_type, "entity_community": comm}
+                    node_id,
+                    {
+                        "entity_id": node_id,
+                        "entity_type": entity_type,
+                        "entity_community": comm,
+                    },
                 )
                 if entity_vdb is not None and node:
                     update_data_vdb[compute_mdhash_id(node_id, prefix="ent-")] = {
