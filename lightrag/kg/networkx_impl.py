@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 from typing import final
+import difflib
 
 from lightrag.types import KnowledgeGraph, KnowledgeGraphNode, KnowledgeGraphEdge
 from lightrag.utils import logger
@@ -14,7 +15,11 @@ if not pm.is_installed("networkx"):
 if not pm.is_installed("graspologic"):
     pm.install("graspologic")
 
+if not pm.is_installed("python-louvain"):
+    pm.install("python-louvain")
+
 import networkx as nx
+import community as community_louvain
 from .shared_storage import (
     get_storage_lock,
     get_update_flag,
@@ -28,7 +33,7 @@ from dotenv import load_dotenv
 # the OS environment variables take precedence over the .env file
 load_dotenv(dotenv_path=".env", override=False)
 
-MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1000))
+MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1500))
 
 
 @final
@@ -100,7 +105,16 @@ class NetworkXStorage(BaseGraphStorage):
 
     async def get_node(self, node_id: str) -> dict[str, str] | None:
         graph = await self._get_graph()
-        return graph.nodes.get(node_id)
+        all_node_ids = list(graph.nodes.keys())
+
+        closest_matches = difflib.get_close_matches(
+            node_id, all_node_ids, n=1, cutoff=0.85
+        )
+        if not closest_matches:
+            return None
+
+        best_match_id = closest_matches[0]
+        return graph.nodes.get(best_match_id)
 
     async def node_degree(self, node_id: str) -> int:
         graph = await self._get_graph()
@@ -216,7 +230,7 @@ class NetworkXStorage(BaseGraphStorage):
         Args:
             node_label: Label of the starting node，* means all nodes
             max_depth: Maximum depth of the subgraph, Defaults to 3
-            max_nodes: Maxiumu nodes to return by BFS, Defaults to 1000
+            max_nodes: Maxiumu nodes to return by BFS, Defaults to 1500
 
         Returns:
             KnowledgeGraph object containing nodes and edges, with an is_truncated flag
@@ -357,13 +371,88 @@ class NetworkXStorage(BaseGraphStorage):
         )
         return result
 
-    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+    async def shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
         graph = await self._get_graph()
         try:
-            length = nx.shortest_path_length(graph, source=source_node_id, target=target_node_id)
+            length = nx.shortest_path_length(
+                graph, source=source_node_id, target=target_node_id
+            )
             return int(length)
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return -1
+
+    async def multi_hop_paths(
+        self,
+        start_node_id: str,
+        max_depth: int = 3,
+        top_k: int = 5,
+    ) -> list[dict]:
+        graph = await self._get_graph()
+        if start_node_id not in graph:
+            return []
+
+        # Limit search to a subgraph within max_depth hops around the start node
+        neighbors = nx.single_source_shortest_path_length(
+            graph, start_node_id, cutoff=max_depth
+        ).keys()
+        subgraph = graph.subgraph(neighbors)
+
+        pr = nx.pagerank(subgraph, personalization={start_node_id: 1.0})
+        paths: list[dict] = []
+        for target in subgraph.nodes:
+            if target == start_node_id:
+                continue
+            for path in nx.all_simple_paths(
+                subgraph, source=start_node_id, target=target, cutoff=max_depth
+            ):
+                if len(path) < 3:
+                    continue
+                strength = sum(pr.get(n, 0) for n in path) / len(path)
+                keywords: list[str] = []
+                for src, tgt in zip(path[:-1], path[1:]):
+                    edge = subgraph.edges.get((src, tgt))
+                    if not edge and subgraph.is_directed():
+                        edge = subgraph.edges.get((tgt, src))
+                    if edge:
+                        k = edge.get("keywords")
+                        if isinstance(k, str):
+                            keywords.extend(k.split(","))
+                keyword_str = ", ".join(sorted(set(keywords)))
+                path_entities = [str(n) for n in path]
+                paths.append(
+                    {
+                        "path_entities": path_entities,
+                        "path_description": " -> ".join(path_entities),
+                        "path_keywords": keyword_str,
+                        "path_strength": strength,
+                    }
+                )
+
+        paths.sort(key=lambda x: x["path_strength"], reverse=True)
+        return paths[:top_k]
+
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        graph = await self._get_graph()
+        if graph.number_of_nodes() == 0:
+            return {}
+
+        nodes = list(graph.nodes)
+        if not nodes:
+            return {}
+
+        sub_nodes = set()
+        for n in nodes:
+            sub_nodes.update(
+                nx.single_source_shortest_path_length(graph, n, cutoff=max_depth).keys()
+            )
+            if len(sub_nodes) >= MAX_GRAPH_NODES:
+                break
+        subgraph = graph.subgraph(sub_nodes)
+
+        partition = community_louvain.best_partition(subgraph)
+        return {str(node): str(comm) for node, comm in partition.items()}
 
     async def index_done_callback(self) -> bool:
         """Save data to disk"""

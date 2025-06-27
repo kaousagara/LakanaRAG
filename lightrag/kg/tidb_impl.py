@@ -400,6 +400,9 @@ class TiDBKVStorage(BaseKVStorage):
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await super().detect_communities(max_depth)
+
 
 @final
 @dataclass
@@ -850,7 +853,9 @@ class TiDBGraphStorage(BaseGraphStorage):
         else:
             return []
 
-    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+    async def shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
         if source_node_id == target_node_id:
             return 0
 
@@ -936,7 +941,7 @@ class TiDBGraphStorage(BaseGraphStorage):
     ) -> KnowledgeGraph:
         """
         Get a connected subgraph of nodes matching the specified label
-        Maximum number of nodes is limited by MAX_GRAPH_NODES environment variable (default: 1000)
+        Maximum number of nodes is limited by MAX_GRAPH_NODES environment variable (default: 1500)
 
         Args:
             node_label: The node label to match
@@ -946,7 +951,7 @@ class TiDBGraphStorage(BaseGraphStorage):
             KnowledgeGraph object containing nodes and edges
         """
         result = KnowledgeGraph()
-        MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1000))
+        MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1500))
 
         # Get matching nodes
         if node_label == "*":

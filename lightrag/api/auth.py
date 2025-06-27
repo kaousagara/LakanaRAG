@@ -57,10 +57,7 @@ class AuthHandler:
             pass
 
     def list_accounts(self):
-        return [
-            {"username": u, **v}
-            for u, v in self.accounts.items()
-        ]
+        return [{"username": u, **v} for u, v in self.accounts.items()]
 
     def add_account(
         self,

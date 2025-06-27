@@ -420,7 +420,11 @@ def create_app(args):
             }
         username = form_data.username
         account = auth_handler.accounts.get(username)
-        if not account or not account.get("active") or account.get("password") != form_data.password:
+        if (
+            not account
+            or not account.get("active")
+            or account.get("password") != form_data.password
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials"
             )
@@ -453,21 +457,28 @@ def create_app(args):
     def admin_auth(token: str = Security(OAuth2PasswordBearer(tokenUrl="login"))):
         info = auth_handler.validate_token(token)
         if info.get("role") != "admin":
-            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Admin access required")
+            raise HTTPException(
+                status_code=HTTP_403_FORBIDDEN, detail="Admin access required"
+            )
 
     if auth_configured:
+
         @app.get("/accounts", dependencies=[Depends(admin_auth)])
         async def list_accounts():
             return {"accounts": auth_handler.list_accounts()}
 
         @app.post("/accounts", dependencies=[Depends(admin_auth)])
         async def create_account(account: AccountCreate):
-            auth_handler.add_account(account.username, account.password, account.role, account.active)
+            auth_handler.add_account(
+                account.username, account.password, account.role, account.active
+            )
             return {"status": "success", "message": "created"}
 
         @app.put("/accounts/{username}", dependencies=[Depends(admin_auth)])
         async def update_account(username: str, account: AccountUpdate):
-            auth_handler.update_account(username, account.password, account.role, account.active)
+            auth_handler.update_account(
+                username, account.password, account.role, account.active
+            )
             return {"status": "success", "message": "updated"}
 
         @app.delete("/accounts/{username}", dependencies=[Depends(admin_auth)])

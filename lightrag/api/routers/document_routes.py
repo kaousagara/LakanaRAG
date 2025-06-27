@@ -1181,14 +1181,17 @@ def create_document_routes(
             if "history_messages" in pipeline_status:
                 pipeline_status["history_messages"].append(error_msg)
             raise HTTPException(status_code=500, detail=str(e))
-        finally:
-            # Reset busy status after completion
-            async with pipeline_status_lock:
-                pipeline_status["busy"] = False
-                completion_msg = "Document clearing process completed"
-                pipeline_status["latest_message"] = completion_msg
-                if "history_messages" in pipeline_status:
-                    pipeline_status["history_messages"].append(completion_msg)
+
+    @router.delete("/{doc_id}", dependencies=[Depends(combined_auth)])
+    async def delete_document(doc_id: str):
+        """Delete a document and all related data."""
+        try:
+            await rag.adelete_by_doc_id(doc_id)
+            return {"status": "success", "message": f"Document {doc_id} deleted"}
+        except Exception as e:
+            logger.error(f"Error deleting document {doc_id}: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=str(e))
 
     @router.get(
         "/pipeline_status",

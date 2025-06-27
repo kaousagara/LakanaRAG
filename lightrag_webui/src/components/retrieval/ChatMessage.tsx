@@ -100,7 +100,17 @@ export const ChatMessage = ({ message }: { message: MessageWithError }) => { // 
             h4: ({ children }: { children?: ReactNode }) => <h4 className="text-base font-semibold mt-3 mb-2">{children}</h4>,
             ul: ({ children }: { children?: ReactNode }) => <ul className="list-disc pl-5 my-2">{children}</ul>,
             ol: ({ children }: { children?: ReactNode }) => <ol className="list-decimal pl-5 my-2">{children}</ol>,
-            li: ({ children }: { children?: ReactNode }) => <li className="my-1">{children}</li>
+            li: ({ children }: { children?: ReactNode }) => <li className="my-1">{children}</li>,
+            a: ({ href, children }: { href?: string; children?: ReactNode }) => (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                {children}
+              </a>
+            )
           }), [message.mermaidRendered])} // Dependency ensures update if mermaid state changes
         >
           {message.content}

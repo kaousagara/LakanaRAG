@@ -9,6 +9,14 @@ This script tests the LightRAG's Ollama compatibility interface, including:
 All responses use the JSON Lines format, complying with the Ollama API specification.
 """
 
+import os
+import pytest
+
+# These integration tests require a running LightRAG server. Skip them unless
+# explicitly enabled via the RUN_INTERACTIVE_TESTS environment variable.
+if not os.getenv("RUN_INTERACTIVE_TESTS"):
+    pytest.skip("Skipping Ollama compatibility tests in CI", allow_module_level=True)
+
 import requests
 import json
 import argparse

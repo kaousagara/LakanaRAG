@@ -33,10 +33,12 @@ ollama_server_infos = OllamaServerInfos()
 
 
 class DefaultRAGStorageConfig:
-    KV_STORAGE = "JsonKVStorage"
-    VECTOR_STORAGE = "NanoVectorDBStorage"
-    GRAPH_STORAGE = "NetworkXStorage"
-    DOC_STATUS_STORAGE = "JsonDocStatusStorage"
+    """Default storage backend selections for LightRAG."""
+
+    KV_STORAGE = "RedisKVStorage"
+    VECTOR_STORAGE = "MilvusVectorDBStorage"
+    GRAPH_STORAGE = "Neo4JStorage"
+    DOC_STATUS_STORAGE = "PGDocStatusStorage"
 
 
 def get_default_host(binding_type: str) -> str:
@@ -48,6 +50,7 @@ def get_default_host(binding_type: str) -> str:
             "https://api.openai.com/v1",
         ),
         "openai": os.getenv("LLM_BINDING_HOST", "https://api.openai.com/v1"),
+        "vllm": os.getenv("LLM_BINDING_HOST", "http://localhost:8000/v1"),
     }
     return default_hosts.get(
         binding_type, os.getenv("LLM_BINDING_HOST", "http://localhost:11434")
@@ -67,8 +70,7 @@ def parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(
         description=(
-            "LightRAG FastAPI Server with separate working "
-            "and input directories"
+            "LightRAG FastAPI Server with separate working " "and input directories"
         )
     )
 
@@ -90,16 +92,14 @@ def parse_args() -> argparse.Namespace:
         "--working-dir",
         default=get_env_value("WORKING_DIR", "./rag_storage"),
         help=(
-            "Working directory for RAG storage "
-            "(default: from env or ./rag_storage)"
+            "Working directory for RAG storage " "(default: from env or ./rag_storage)"
         ),
     )
     parser.add_argument(
         "--input-dir",
         default=get_env_value("INPUT_DIR", "./inputs"),
         help=(
-            "Directory containing input documents "
-            "(default: from env or ./inputs)"
+            "Directory containing input documents " "(default: from env or ./inputs)"
         ),
     )
 
@@ -171,10 +171,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ssl-keyfile",
         default=get_env_value("SSL_KEYFILE", None),
-        help=(
-            "Path to SSL private key file "
-            "(required if --ssl is enabled)"
-        ),
+        help=("Path to SSL private key file " "(required if --ssl is enabled)"),
     )
 
     parser.add_argument(
@@ -192,19 +189,13 @@ def parse_args() -> argparse.Namespace:
         "--top-k",
         type=int,
         default=get_env_value("TOP_K", 60, int),
-        help=(
-            "Number of most similar results to return "
-            "(default: from env or 60)"
-        ),
+        help=("Number of most similar results to return " "(default: from env or 60)"),
     )
     parser.add_argument(
         "--cosine-threshold",
         type=float,
         default=get_env_value("COSINE_THRESHOLD", 0.2, float),
-        help=(
-            "Cosine similarity threshold "
-            "(default: from env or 0.4)"
-        ),
+        help=("Cosine similarity threshold " "(default: from env or 0.4)"),
     )
 
     # Ollama model name
@@ -254,6 +245,7 @@ def parse_args() -> argparse.Namespace:
             "openai",
             "openai-ollama",
             "azure_openai",
+            "vllm",
         ],
         help="LLM binding type (default: from env or ollama)",
     )
@@ -267,10 +259,7 @@ def parse_args() -> argparse.Namespace:
             "openai",
             "azure_openai",
         ],
-        help=(
-            "Embedding binding type "
-            "(default: from env or ollama)"
-        ),
+        help=("Embedding binding type " "(default: from env or ollama)"),
     )
 
     args = parser.parse_args()
@@ -296,9 +285,7 @@ def parse_args() -> argparse.Namespace:
     )
 
     # Get MAX_PARALLEL_INSERT from environment
-    args.max_parallel_insert = get_env_value(
-        "MAX_PARALLEL_INSERT", 2, int
-    )
+    args.max_parallel_insert = get_env_value("MAX_PARALLEL_INSERT", 2, int)
 
     # Handle openai-ollama special case
     if args.llm_binding == "openai-ollama":
@@ -313,32 +300,34 @@ def parse_args() -> argparse.Namespace:
         "EMBEDDING_BINDING_HOST",
         get_default_host(args.embedding_binding),
     )
-    args.llm_binding_api_key = get_env_value(
-        "LLM_BINDING_API_KEY", None
-    )
-    args.embedding_binding_api_key = get_env_value(
-        "EMBEDDING_BINDING_API_KEY", ""
-    )
+    args.llm_binding_api_key = get_env_value("LLM_BINDING_API_KEY", None)
+    args.embedding_binding_api_key = get_env_value("EMBEDDING_BINDING_API_KEY", "")
 
     # Inject model configuration
     args.llm_model = get_env_value("LLM_MODEL", "mistral-nemo:latest")
     args.embedding_model = get_env_value("EMBEDDING_MODEL", "bge-m3:latest")
     args.embedding_dim = get_env_value("EMBEDDING_DIM", 1024, int)
-    args.max_embed_tokens = get_env_value(
-        "MAX_EMBED_TOKENS", 8192, int
-    )
+    args.max_embed_tokens = get_env_value("MAX_EMBED_TOKENS", 8192, int)
 
     # Inject chunk configuration
     args.chunk_size = get_env_value("CHUNK_SIZE", 1200, int)
-    args.chunk_overlap_size = get_env_value(
-        "CHUNK_OVERLAP_SIZE", 100, int
-    )
+    args.chunk_overlap_size = get_env_value("CHUNK_OVERLAP_SIZE", 100, int)
 
     # Inject LLM cache configuration
     args.enable_llm_cache_for_extract = get_env_value(
         "ENABLE_LLM_CACHE_FOR_EXTRACT", True, bool
     )
     args.enable_llm_cache = get_env_value("ENABLE_LLM_CACHE", True, bool)
+    args.enable_multi_hop = get_env_value("ENABLE_MULTI_HOP", True, bool)
+    args.enable_latent_relation = get_env_value("ENABLE_LATENT_RELATION", True, bool)
+    args.enable_association = get_env_value("ENABLE_ASSOCIATION", True, bool)
+    args.enable_description_enrichment = get_env_value(
+        "ENABLE_DESCRIPTION_ENRICHMENT", False, bool
+    )
+    args.enable_geo_enrichment = get_env_value("ENABLE_GEO_ENRICHMENT", False, bool)
+    args.enable_community_detection = get_env_value(
+        "ENABLE_COMMUNITY_DETECTION", False, bool
+    )
 
     # Inject LLM temperature configuration
     args.temperature = get_env_value("TEMPERATURE", 0.5, float)
@@ -381,8 +370,7 @@ def update_uvicorn_mode_config():
         global_args.workers = 1
         # Log warning directly here
         logging.warning(
-            "In uvicorn mode, workers parameter was set to %s. "
-            "Forcing workers=1",
+            "In uvicorn mode, workers parameter was set to %s. " "Forcing workers=1",
             original_workers,
         )
 

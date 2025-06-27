@@ -36,8 +36,8 @@ from dotenv import load_dotenv
 # the OS environment variables take precedence over the .env file
 load_dotenv(dotenv_path=".env", override=False)
 
-# Get maximum number of graph nodes from environment variable, default is 1000
-MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1000))
+# Get maximum number of graph nodes from environment variable, default is 1500
+MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1500))
 
 config = configparser.ConfigParser()
 config.read("config.ini", "utf-8")
@@ -286,7 +286,7 @@ class Neo4JStorage(BaseGraphStorage):
             database=self._DATABASE, default_access_mode="READ"
         ) as session:
             try:
-                query = "MATCH (n:base {entity_id: $entity_id}) RETURN n"
+                query = """MATCH (n:base) WITH n, apoc.text.jaroWinklerDistance(toLower(n.entity_id), toLower($entity_id)) AS similarity WHERE similarity > 0.85 RETURN n, similarity ORDER BY similarity DESC LIMIT 1"""
                 result = await session.run(query, entity_id=node_id)
                 try:
                     records = await result.fetch(
@@ -850,7 +850,7 @@ class Neo4JStorage(BaseGraphStorage):
         Args:
             node_label: Label of the starting node, * means all nodes
             max_depth: Maximum depth of the subgraph, Defaults to 3
-            max_nodes: Maxiumu nodes to return by BFS, Defaults to 1000
+            max_nodes: Maxiumu nodes to return by BFS, Defaults to 1500
 
         Returns:
             KnowledgeGraph object containing nodes and edges, with an is_truncated flag
@@ -1045,7 +1045,9 @@ class Neo4JStorage(BaseGraphStorage):
 
         return result
 
-    async def shortest_path_length(self, source_node_id: str, target_node_id: str) -> int:
+    async def shortest_path_length(
+        self, source_node_id: str, target_node_id: str
+    ) -> int:
         query = (
             "MATCH (a:base {entity_id:$src}), (b:base {entity_id:$tgt}), "
             "p=shortestPath((a)-[*..15]-(b)) RETURN length(p) AS len"
@@ -1143,7 +1145,7 @@ class Neo4JStorage(BaseGraphStorage):
                 results = await session.run(query, entity_id=current_node.id)
 
                 # Get all records and release database connection
-                records = await results.fetch(1000)  # Max neighbor nodes we can handle
+                records = await results.fetch(1500)  # Max neighbor nodes we can handle
                 await results.consume()  # Ensure results are consumed
 
                 # Process all neighbors - capture all edges but only queue unvisited nodes
@@ -1362,3 +1364,6 @@ class Neo4JStorage(BaseGraphStorage):
         except Exception as e:
             logger.error(f"Error dropping Neo4j database {self._DATABASE}: {e}")
             return {"status": "error", "message": str(e)}
+
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await super().detect_communities(max_depth)

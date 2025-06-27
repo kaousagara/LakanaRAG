@@ -43,8 +43,8 @@ from dotenv import load_dotenv
 # the OS environment variables take precedence over the .env file
 load_dotenv(dotenv_path=".env", override=False)
 
-# Get maximum number of graph nodes from environment variable, default is 1000
-MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1000))
+# Get maximum number of graph nodes from environment variable, default is 1500
+MAX_GRAPH_NODES = int(os.getenv("MAX_GRAPH_NODES", 1500))
 
 
 class PostgreSQLDB:
@@ -2211,7 +2211,7 @@ class PGGraphStorage(BaseGraphStorage):
         Args:
             node_label: Label of the starting node, * means all nodes
             max_depth: Maximum depth of the subgraph, Defaults to 3
-            max_nodes: Maxiumu nodes to return, Defaults to 1000
+            max_nodes: Maxiumu nodes to return, Defaults to 1500
 
         Returns:
             KnowledgeGraph object containing nodes and edges, with an is_truncated flag
@@ -2354,6 +2354,9 @@ class PGGraphStorage(BaseGraphStorage):
         except Exception as e:
             logger.error(f"Error dropping graph: {e}")
             return {"status": "error", "message": str(e)}
+
+    async def detect_communities(self, max_depth: int = 3) -> dict[str, str]:
+        return await super().detect_communities(max_depth)
 
 
 NAMESPACE_TABLE_MAP = {

@@ -11,8 +11,17 @@
 - PGGraphStorage
 """
 
-import asyncio
 import os
+import pytest
+
+# Skip this module when running in non-interactive CI environments. The tests
+# require optional backend services and user input.
+if not os.getenv("RUN_INTERACTIVE_TESTS"):
+    pytest.skip(
+        "Skipping interactive graph storage tests in CI", allow_module_level=True
+    )
+
+import asyncio
 import sys
 import importlib
 import numpy as np
@@ -1077,6 +1086,25 @@ async def test_graph_undirected_property(storage):
         print("\n无向图特性测试完成")
         return True
 
+    except Exception as e:
+        ASCIIColors.red(f"测试过程中发生错误: {str(e)}")
+        return False
+
+
+async def test_graph_multi_hop(storage):
+    """Test multi-hop path discovery"""
+    try:
+        await storage.upsert_node("A", {"entity_id": "A"})
+        await storage.upsert_node("B", {"entity_id": "B"})
+        await storage.upsert_node("C", {"entity_id": "C"})
+        await storage.upsert_edge("A", "B", {"weight": 1.0})
+        await storage.upsert_edge("B", "C", {"weight": 1.0})
+
+        paths = await storage.multi_hop_paths("A", max_depth=3, top_k=1)
+        assert len(paths) == 1
+        assert paths[0]["path_entities"] == ["A", "B", "C"]
+        print("multi hop paths:", paths)
+        return True
     except Exception as e:
         ASCIIColors.red(f"测试过程中发生错误: {str(e)}")
         return False
