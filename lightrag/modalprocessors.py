@@ -83,31 +83,37 @@ class BaseModalProcessor:
         # Store chunk
         await self.text_chunks_db.upsert({chunk_id: chunk_data})
 
-        # Create entity node
-        node_data = {
-            "entity_id": entity_info["entity_name"],
-            "entity_type": entity_info["entity_type"],
-            "description": entity_info["summary"],
-            "source_id": chunk_id,
-            "file_path": file_path,
-            "created_at": int(time.time()),
-        }
-
-        await self.knowledge_graph_inst.upsert_node(
-            entity_info["entity_name"], node_data
-        )
-
-        # Insert entity into vector database
-        entity_vdb_data = {
-            compute_mdhash_id(entity_info["entity_name"], prefix="ent-"): {
-                "entity_name": entity_info["entity_name"],
+        # Create entity node only if summary is provided
+        if entity_info.get("summary", "").strip():
+            node_data = {
+                "entity_id": entity_info["entity_name"],
                 "entity_type": entity_info["entity_type"],
-                "content": f"{entity_info['entity_name']}\n{entity_info['summary']}",
+                "description": entity_info["summary"],
                 "source_id": chunk_id,
                 "file_path": file_path,
+                "created_at": int(time.time()),
             }
-        }
-        await self.entities_vdb.upsert(entity_vdb_data)
+
+            await self.knowledge_graph_inst.upsert_node(
+                entity_info["entity_name"], node_data
+            )
+
+            # Insert entity into vector database
+            entity_vdb_data = {
+                compute_mdhash_id(entity_info["entity_name"], prefix="ent-"): {
+                    "entity_name": entity_info["entity_name"],
+                    "entity_type": entity_info["entity_type"],
+                    "content": f"{entity_info['entity_name']}\n{entity_info['summary']}",
+                    "source_id": chunk_id,
+                    "file_path": file_path,
+                }
+            }
+            await self.entities_vdb.upsert(entity_vdb_data)
+        else:
+            logger.warning(
+                f"Skip entity '{entity_info.get('entity_name')}' due to empty summary"
+            )
+            return "", {}
 
         # Process entity and relationship extraction
         await self._process_chunk_for_extraction(chunk_id, entity_info["entity_name"])

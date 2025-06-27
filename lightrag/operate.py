@@ -475,18 +475,33 @@ async def _merge_nodes_then_upsert(
             already_entity_communities.append(entity_comm_value)
 
     entity_type = sorted(
-        Counter([dp.get("entity_type", "UNKNOWN") for dp in nodes_data] + already_entity_types).items(),
+        Counter(
+            [dp.get("entity_type", "UNKNOWN") for dp in nodes_data]
+            + already_entity_types
+        ).items(),
         key=lambda x: x[1],
         reverse=True,
     )[0][0]
     description = GRAPH_FIELD_SEP.join(
-        sorted(set([dp.get("description", "") for dp in nodes_data] + already_description))
+        sorted(
+            set([dp.get("description", "") for dp in nodes_data] + already_description)
+        )
     )
+    # Skip creation if description is empty after merging
+    if not description.strip():
+        logger.warning(f"Skip inserting node '{entity_name}' due to empty description")
+        return None
     source_id = GRAPH_FIELD_SEP.join(
-        set([dp["source_id"] for dp in nodes_data if dp.get("source_id")] + already_source_ids)
+        set(
+            [dp["source_id"] for dp in nodes_data if dp.get("source_id")]
+            + already_source_ids
+        )
     )
     file_path = GRAPH_FIELD_SEP.join(
-        set([dp["file_path"] for dp in nodes_data if dp.get("file_path")] + already_file_paths)
+        set(
+            [dp["file_path"] for dp in nodes_data if dp.get("file_path")]
+            + already_file_paths
+        )
     )
 
     additional_properties = GRAPH_FIELD_SEP.join(
@@ -779,6 +794,9 @@ async def _merge_association_then_upsert(
     entities = [standardize_entity_name(e) for e in assoc["entities"]]
     assoc_id = compute_mdhash_id("::".join(sorted(entities)), prefix="assoc-")
     description = assoc["description"] + GRAPH_FIELD_SEP + assoc["generalization"]
+    if not description.strip():
+        logger.warning(f"Skip association node '{assoc_id}' due to empty description")
+        return None
 
     node_data = dict(
         entity_id=assoc_id,
@@ -846,6 +864,9 @@ async def _merge_multi_hop_then_upsert(
     entities = [standardize_entity_name(e) for e in path["path_entities"]]
     path_id = compute_mdhash_id("->".join(entities), prefix="mh-")
     description = path["path_description"]
+    if not description.strip():
+        logger.warning(f"Skip multi-hop node '{path_id}' due to empty description")
+        return None, []
 
     node_data = dict(
         entity_id=path_id,
@@ -957,7 +978,8 @@ async def merge_nodes_and_edges(
                 pipeline_status_lock,
                 llm_response_cache,
             )
-            entities_data.append(entity_data)
+            if entity_data is not None:
+                entities_data.append(entity_data)
 
         # Process and update all relationships at once
         for edge_key, edges in all_edges.items():
@@ -984,7 +1006,8 @@ async def merge_nodes_and_edges(
                     pipeline_status_lock,
                     llm_response_cache,
                 )
-                associations_nodes.append(assoc_node)
+                if assoc_node is not None:
+                    associations_nodes.append(assoc_node)
 
         multi_hop_edges_from_paths = []
         if global_config.get("enable_multi_hop", True):
@@ -997,8 +1020,9 @@ async def merge_nodes_and_edges(
                     pipeline_status_lock,
                     llm_response_cache,
                 )
-                multi_hop_nodes.append(mh_node)
-                multi_hop_edges_from_paths.extend(mh_edges)
+                if mh_node is not None:
+                    multi_hop_nodes.append(mh_node)
+                    multi_hop_edges_from_paths.extend(mh_edges)
 
         # Update total counts
         total_entities_count = len(entities_data)
