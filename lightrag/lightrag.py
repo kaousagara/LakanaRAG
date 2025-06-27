@@ -61,7 +61,7 @@ from .operate import (
     naive_query,
     query_with_keywords,
 )
-from .prompt import GRAPH_FIELD_SEP
+from .prompt import GRAPH_FIELD_SEP, PROMPTS
 from .utils import (
     Tokenizer,
     TiktokenTokenizer,
@@ -1525,6 +1525,23 @@ class LightRAG:
                 system_prompt=system_prompt,
                 chunks_vdb=self.chunks_vdb,
             )
+        elif param.mode == "analyste":
+            response = await kg_query(
+                query.strip(),
+                self.chunk_entity_relation_graph,
+                self.entities_vdb,
+                self.relationships_vdb,
+                self.text_chunks,
+                param,
+                global_config,
+                hashing_kv=self.llm_response_cache,
+                system_prompt=PROMPTS["Analyst_response"],
+                chunks_vdb=self.chunks_vdb,
+            )
+        elif param.mode == "deepsearch":
+            from .deepsearch import deepsearch_query
+
+            response = await deepsearch_query(query.strip(), self, param)
         elif param.mode == "naive":
             response = await naive_query(
                 query.strip(),
@@ -1630,7 +1647,16 @@ class LightRAG:
             logger.warning("No cache storage configured")
             return
 
-        valid_modes = ["default", "naive", "local", "global", "hybrid", "mix"]
+        valid_modes = [
+            "default",
+            "naive",
+            "local",
+            "global",
+            "hybrid",
+            "mix",
+            "analyste",
+            "deepsearch",
+        ]
 
         # Validate input
         if modes and not all(mode in valid_modes for mode in modes):

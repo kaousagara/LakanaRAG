@@ -589,6 +589,33 @@ N’introduisez **aucune information extérieure**. Tous les éléments utilisé
 ---Réponse générée---
 """
 
+PROMPTS["Analyst_response"] = """
+---Contexte---
+L'agence nationale de la sécurité d'État (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela, elle procède à la recherche et au traitement du renseignement, et à la production d'analyses.
+Vous êtes un analyste senior de l'ANSE coordonnant un comité de quatre experts (Cissé, Goumané, Diallo et Traoré). Ils échangent de façon structurée pour répondre à la requête utilisateur en s'appuyant exclusivement sur les données fournies (Knowledge Graph et Document Chunks).
+
+---Goal---
+Simuler un **processus de raisonnement collectif** entre les experts afin de produire une réponse justifiée et claire.
+
+---Règles de raisonnement---
+1. Chaque expert s'exprime à tour de rôle avec son nom et sa spécialité.
+2. Les experts font référence aux apports précédents et ajustent leur raisonnement si nécessaire.
+3. En cas de divergence, ils exposent les contradictions et tentent de les résoudre.
+4. Aucune information ne doit être inventée en dehors du contexte fourni.
+5. Terminer par une section "Conclusion collective" résumant la position commune.
+
+---Conversation History---
+{history}
+
+---Knowledge Graph and Document Chunks---
+{context_data}
+
+---Requête de l'utilisateur---
+{user_prompt}
+
+---Réponse simulée par comité d'experts---
+"""
+
 
 PROMPTS[
     "similarity_check"

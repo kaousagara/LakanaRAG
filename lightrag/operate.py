@@ -446,34 +446,47 @@ async def _merge_nodes_then_upsert(
 
     already_node = await knowledge_graph_inst.get_node(entity_name)
     if already_node:
-        already_entity_types.append(already_node["entity_type"])
-        already_source_ids.extend(
-            split_string_by_multi_markers(already_node["source_id"], [GRAPH_FIELD_SEP])
-        )
-        already_file_paths.extend(
-            split_string_by_multi_markers(already_node["file_path"], [GRAPH_FIELD_SEP])
-        )
-        already_description.append(already_node["description"])
-        if "additional_properties" in already_node:
-            already_additional_properties.append(already_node["additional_properties"])
-        if "entity_community" in already_node:
-            already_entity_communities.append(already_node["entity_community"])
+        entity_type_value = already_node.get("entity_type")
+        if entity_type_value is not None:
+            already_entity_types.append(entity_type_value)
+
+        source_id_value = already_node.get("source_id")
+        if source_id_value:
+            already_source_ids.extend(
+                split_string_by_multi_markers(source_id_value, [GRAPH_FIELD_SEP])
+            )
+
+        file_path_value = already_node.get("file_path")
+        if file_path_value:
+            already_file_paths.extend(
+                split_string_by_multi_markers(file_path_value, [GRAPH_FIELD_SEP])
+            )
+
+        description_value = already_node.get("description")
+        if description_value is not None:
+            already_description.append(description_value)
+
+        additional_prop_value = already_node.get("additional_properties")
+        if additional_prop_value is not None:
+            already_additional_properties.append(additional_prop_value)
+
+        entity_comm_value = already_node.get("entity_community")
+        if entity_comm_value is not None:
+            already_entity_communities.append(entity_comm_value)
 
     entity_type = sorted(
-        Counter(
-            [dp["entity_type"] for dp in nodes_data] + already_entity_types
-        ).items(),
+        Counter([dp.get("entity_type", "UNKNOWN") for dp in nodes_data] + already_entity_types).items(),
         key=lambda x: x[1],
         reverse=True,
     )[0][0]
     description = GRAPH_FIELD_SEP.join(
-        sorted(set([dp["description"] for dp in nodes_data] + already_description))
+        sorted(set([dp.get("description", "") for dp in nodes_data] + already_description))
     )
     source_id = GRAPH_FIELD_SEP.join(
-        set([dp["source_id"] for dp in nodes_data] + already_source_ids)
+        set([dp["source_id"] for dp in nodes_data if dp.get("source_id")] + already_source_ids)
     )
     file_path = GRAPH_FIELD_SEP.join(
-        set([dp["file_path"] for dp in nodes_data] + already_file_paths)
+        set([dp["file_path"] for dp in nodes_data if dp.get("file_path")] + already_file_paths)
     )
 
     additional_properties = GRAPH_FIELD_SEP.join(
@@ -2117,11 +2130,13 @@ async def _find_most_related_text_unit_from_entities(
     global_config: dict | None = None,
     llm_response_cache: BaseKVStorage | None = None,
 ):
-    text_units = [
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
-        for dp in node_datas
-        if dp["source_id"] is not None
-    ]
+    text_units = []
+    for dp in node_datas:
+        source_id = dp.get("source_id")
+        if source_id is not None:
+            text_units.append(
+                split_string_by_multi_markers(source_id, [GRAPH_FIELD_SEP])
+            )
 
     node_names = [dp["entity_name"] for dp in node_datas]
     batch_edges_dict = await knowledge_graph_inst.get_nodes_edges_batch(node_names)
@@ -2546,11 +2561,13 @@ async def _find_related_text_unit_from_relationships(
     text_chunks_db: BaseKVStorage,
     knowledge_graph_inst: BaseGraphStorage,
 ):
-    text_units = [
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
-        for dp in edge_datas
-        if dp["source_id"] is not None
-    ]
+    text_units = []
+    for dp in edge_datas:
+        source_id = dp.get("source_id")
+        if source_id is not None:
+            text_units.append(
+                split_string_by_multi_markers(source_id, [GRAPH_FIELD_SEP])
+            )
     all_text_units_lookup = {}
     semaphore = asyncio.Semaphore(CHUNK_FETCH_MAX_CONCURRENCY)
 
