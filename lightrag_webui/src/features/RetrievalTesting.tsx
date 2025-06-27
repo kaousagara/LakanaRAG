@@ -86,7 +86,16 @@ export default function RetrievalTesting() {
       if (!inputValue.trim() || isLoading) return
 
       // Parse query mode prefix
-      const allowedModes: QueryMode[] = ['naive', 'local', 'global', 'hybrid', 'mix', 'bypass']
+      const allowedModes: QueryMode[] = [
+        'naive',
+        'local',
+        'global',
+        'hybrid',
+        'mix',
+        'bypass',
+        'analyste',
+        'deepsearch'
+      ]
       const prefixMatch = inputValue.match(/^\/(\w+)\s+(.+)/)
       let modeOverride: QueryMode | undefined = undefined
       let actualQuery = inputValue
@@ -103,7 +112,7 @@ export default function RetrievalTesting() {
         if (!allowedModes.includes(mode)) {
           setInputError(
             t('retrievePanel.retrieval.queryModeError', {
-              modes: 'naive, local, global, hybrid, mix, bypass',
+              modes: 'naive, local, global, hybrid, mix, bypass, analyste, deepsearch',
             })
           )
           return

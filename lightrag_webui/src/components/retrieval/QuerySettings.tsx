@@ -66,6 +66,8 @@ export default function QuerySettings() {
                     <SelectItem value="hybrid">{t('retrievePanel.querySettings.queryModeOptions.hybrid')}</SelectItem>
                     <SelectItem value="mix">{t('retrievePanel.querySettings.queryModeOptions.mix')}</SelectItem>
                     <SelectItem value="bypass">{t('retrievePanel.querySettings.queryModeOptions.bypass')}</SelectItem>
+                    <SelectItem value="analyste">{t('retrievePanel.querySettings.queryModeOptions.analyste')}</SelectItem>
+                    <SelectItem value="deepsearch">{t('retrievePanel.querySettings.queryModeOptions.deepsearch')}</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>

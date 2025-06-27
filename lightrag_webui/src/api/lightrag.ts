@@ -66,8 +66,18 @@ export type LightragDocumentsScanProgress = {
  * - "hybrid": Combines local and global retrieval methods.
  * - "mix": Integrates knowledge graph and vector retrieval.
  * - "bypass": Bypasses knowledge retrieval and directly uses the LLM.
+ * - "analyste": Hybrid reasoning with an analyst committee prompt.
+ * - "deepsearch": Tree-of-Thought search producing a PDF report.
  */
-export type QueryMode = 'naive' | 'local' | 'global' | 'hybrid' | 'mix' | 'bypass'
+export type QueryMode =
+  | 'naive'
+  | 'local'
+  | 'global'
+  | 'hybrid'
+  | 'mix'
+  | 'bypass'
+  | 'analyste'
+  | 'deepsearch'
 
 export type Message = {
   role: 'user' | 'assistant' | 'system'
