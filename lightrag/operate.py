@@ -2118,9 +2118,9 @@ async def _find_most_related_text_unit_from_entities(
     llm_response_cache: BaseKVStorage | None = None,
 ):
     text_units = [
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
+        split_string_by_multi_markers(dp.get("source_id"), [GRAPH_FIELD_SEP])
         for dp in node_datas
-        if dp["source_id"] is not None
+        if dp.get("source_id") is not None
     ]
 
     node_names = [dp["entity_name"] for dp in node_datas]
@@ -2547,9 +2547,9 @@ async def _find_related_text_unit_from_relationships(
     knowledge_graph_inst: BaseGraphStorage,
 ):
     text_units = [
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
+        split_string_by_multi_markers(dp.get("source_id"), [GRAPH_FIELD_SEP])
         for dp in edge_datas
-        if dp["source_id"] is not None
+        if dp.get("source_id") is not None
     ]
     all_text_units_lookup = {}
     semaphore = asyncio.Semaphore(CHUNK_FETCH_MAX_CONCURRENCY)
