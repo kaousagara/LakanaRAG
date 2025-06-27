@@ -1116,21 +1116,21 @@ async def merge_nodes_and_edges(
             communities = await knowledge_graph_inst.detect_communities()
             update_data_vdb = {}
             for node_id, comm in communities.items():
+                node = await knowledge_graph_inst.get_node(node_id)
+                entity_type = node.get("entity_type", "UNKNOWN") if node else "UNKNOWN"
                 await knowledge_graph_inst.upsert_node(
-                    node_id, {"entity_community": comm}
+                    node_id, {"entity_type": entity_type, "entity_community": comm}
                 )
-                if entity_vdb is not None:
-                    node = await knowledge_graph_inst.get_node(node_id)
-                    if node:
-                        update_data_vdb[compute_mdhash_id(node_id, prefix="ent-")] = {
-                            "entity_name": node_id,
-                            "entity_type": node.get("entity_type", "UNKNOWN"),
-                            "content": _truncate_content(
-                                f"{node_id}\n{node.get('description','')}\n{node.get('additional_properties','')}\n{comm}"
-                            ),
-                            "source_id": node.get("source_id"),
-                            "file_path": node.get("file_path", "unknown_source"),
-                        }
+                if entity_vdb is not None and node:
+                    update_data_vdb[compute_mdhash_id(node_id, prefix="ent-")] = {
+                        "entity_name": node_id,
+                        "entity_type": entity_type,
+                        "content": _truncate_content(
+                            f"{node_id}\n{node.get('description','')}\n{node.get('additional_properties','')}\n{comm}"
+                        ),
+                        "source_id": node.get("source_id"),
+                        "file_path": node.get("file_path", "unknown_source"),
+                    }
             if entity_vdb is not None and update_data_vdb:
                 await entity_vdb.upsert(update_data_vdb)
 
