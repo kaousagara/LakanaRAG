@@ -504,6 +504,13 @@ async def _merge_nodes_then_upsert(
         )
     )
 
+    # Skip creation if node lacks chunk linkage
+    if not source_id and not file_path:
+        logger.warning(
+            f"Skip inserting node '{entity_name}' due to missing source_id and file_path"
+        )
+        return None
+
     additional_properties = GRAPH_FIELD_SEP.join(
         sorted(
             set(
@@ -704,16 +711,11 @@ async def _merge_edges_then_upsert(
 
     for need_insert_id in [src_id, tgt_id]:
         if not (await knowledge_graph_inst.has_node(need_insert_id)):
-            # # Discard this edge if the node does not exist
-            # if need_insert_id == src_id:
-            #     logger.warning(
-            #         f"Discard edge: {src_id} - {tgt_id} | Source node missing"
-            #     )
-            # else:
-            #     logger.warning(
-            #         f"Discard edge: {src_id} - {tgt_id} | Target node missing"
-            #     )
-            # return None
+            if not source_id and not file_path:
+                logger.warning(
+                    f"Skip creating node '{need_insert_id}' for edge {src_id}-{tgt_id} due to missing source_id and file_path"
+                )
+                continue
             await knowledge_graph_inst.upsert_node(
                 need_insert_id,
                 node_data={
@@ -809,6 +811,12 @@ async def _merge_association_then_upsert(
         file_path=assoc.get("file_path", "unknown_source"),
         created_at=int(time.time()),
     )
+
+    if not node_data["source_id"] and not node_data["file_path"]:
+        logger.warning(
+            f"Skip association node '{assoc_id}' due to missing source_id and file_path"
+        )
+        return None
     await knowledge_graph_inst.upsert_node(assoc_id, node_data)
 
     # Link association node to its entities
@@ -879,6 +887,12 @@ async def _merge_multi_hop_then_upsert(
         file_path=path.get("file_path", "unknown_source"),
         created_at=int(time.time()),
     )
+
+    if not node_data["source_id"] and not node_data["file_path"]:
+        logger.warning(
+            f"Skip multi-hop node '{path_id}' due to missing source_id and file_path"
+        )
+        return None, []
     await knowledge_graph_inst.upsert_node(path_id, node_data)
 
     inserted_edges = []
