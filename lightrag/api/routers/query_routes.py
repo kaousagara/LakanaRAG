@@ -8,6 +8,13 @@ from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from lightrag.base import QueryParam
+from lightrag.user_profile import (
+    load_user_profile,
+    update_user_profile,
+    record_feedback,
+    get_conversation_history,
+    append_conversation_history,
+)
 from ..utils_api import get_combined_auth_dependency
 from pydantic import BaseModel, Field, field_validator
 
@@ -96,34 +103,44 @@ class QueryRequest(BaseModel):
         description="User-provided prompt for the query. If provided, this will be used instead of the default value from prompt template.",
     )
 
+    user_profile: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Profile information about the user issuing the query.",
+    )
+
+    user_id: Optional[str] = Field(
+        default=None,
+        description="Identifier used to load and persist the user profile.",
+    )
+
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="Identifier of the conversation used to store history.",
+    )
+
+    def to_query_params(self, is_stream: bool) -> "QueryParam":
+        """Convert this model into a :class:`QueryParam`."""
+        request_data = self.model_dump(exclude_none=True, exclude={"query"})
+        param = QueryParam(**request_data)
+        param.stream = is_stream
+        return param
+
+
+class FeedbackRequest(BaseModel):
+    user_id: str = Field(..., description="Identifier of the user")
+    query: str = Field(..., description="Original query")
+    response: str = Field(..., description="System response")
+    rating: Literal["positive", "negative"] = Field(
+        ..., description="Explicit user rating"
+    )
+    notes: Optional[str] = Field(
+        default=None, description="Optional feedback notes from the user"
+    )
+
     @field_validator("query", mode="after")
     @classmethod
     def query_strip_after(cls, query: str) -> str:
         return query.strip()
-
-    @field_validator("conversation_history", mode="after")
-    @classmethod
-    def conversation_history_role_check(
-        cls, conversation_history: List[Dict[str, Any]] | None
-    ) -> List[Dict[str, Any]] | None:
-        if conversation_history is None:
-            return None
-        for msg in conversation_history:
-            if "role" not in msg or msg["role"] not in {"user", "assistant"}:
-                raise ValueError(
-                    "Each message must have a 'role' key with value 'user' or 'assistant'."
-                )
-        return conversation_history
-
-    def to_query_params(self, is_stream: bool) -> "QueryParam":
-        """Converts a QueryRequest instance into a QueryParam instance."""
-        # Use Pydantic's `.model_dump(exclude_none=True)` to remove None values automatically
-        request_data = self.model_dump(exclude_none=True, exclude={"query"})
-
-        # Ensure `mode` and `stream` are set explicitly
-        param = QueryParam(**request_data)
-        param.stream = is_stream
-        return param
 
 
 class QueryResponse(BaseModel):
@@ -155,7 +172,42 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
         """
         try:
             param = request.to_query_params(False)
+            if request.user_id:
+                if request.user_profile is not None:
+                    param.user_profile = update_user_profile(
+                        request.user_id, request.user_profile
+                    )
+                else:
+                    param.user_profile = load_user_profile(request.user_id)
+                param.user_id = request.user_id
+                param.conversation_id = request.conversation_id
+                if request.conversation_history is None and request.conversation_id:
+                    param.conversation_history = get_conversation_history(
+                        request.user_id, request.conversation_id
+                    )
+            if request.user_profile and not request.user_id:
+                param.user_profile = request.user_profile
+            if request.conversation_history and not param.conversation_history:
+                param.conversation_history = request.conversation_history
+
             response = await rag.aquery(request.query, param=param)
+
+            if request.user_id:
+                if isinstance(response, str):
+                    resp_text = response
+                elif isinstance(response, dict):
+                    resp_text = json.dumps(response, indent=2)
+                else:
+                    resp_text = str(response)
+                if request.conversation_id:
+                    append_conversation_history(
+                        request.user_id,
+                        request.conversation_id,
+                        [
+                            {"role": "user", "content": request.query},
+                            {"role": "assistant", "content": resp_text},
+                        ],
+                    )
 
             # If response is a string (e.g. cache hit), return directly
             if isinstance(response, str):
@@ -166,6 +218,22 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
                 return QueryResponse(response=result)
             else:
                 return QueryResponse(response=str(response))
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/feedback", dependencies=[Depends(combined_auth)])
+    async def submit_feedback(request: FeedbackRequest):
+        """Record explicit user feedback for a query response."""
+        try:
+            record_feedback(
+                request.user_id,
+                request.query,
+                request.response,
+                request.rating,
+                request.notes,
+            )
+            return {"status": "success"}
         except Exception as e:
             trace_exception(e)
             raise HTTPException(status_code=500, detail=str(e))
@@ -184,23 +252,63 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
         """
         try:
             param = request.to_query_params(True)
+            if request.user_id:
+                if request.user_profile is not None:
+                    param.user_profile = update_user_profile(
+                        request.user_id, request.user_profile
+                    )
+                else:
+                    param.user_profile = load_user_profile(request.user_id)
+                param.user_id = request.user_id
+                param.conversation_id = request.conversation_id
+                if request.conversation_history is None and request.conversation_id:
+                    param.conversation_history = get_conversation_history(
+                        request.user_id, request.conversation_id
+                    )
+            if request.user_profile and not request.user_id:
+                param.user_profile = request.user_profile
+            if request.conversation_history and not param.conversation_history:
+                param.conversation_history = request.conversation_history
+
             response = await rag.aquery(request.query, param=param)
 
             from fastapi.responses import StreamingResponse
 
             async def stream_generator():
                 if isinstance(response, str):
-                    # If it's a string, send it all at once
+                    if request.user_id and request.conversation_id:
+                        append_conversation_history(
+                            request.user_id,
+                            request.conversation_id,
+                            [
+                                {"role": "user", "content": request.query},
+                                {"role": "assistant", "content": response},
+                            ],
+                        )
                     yield f"{json.dumps({'response': response})}\n"
                 else:
-                    # If it's an async generator, send chunks one by one
+                    collected: list[str] = []
                     try:
                         async for chunk in response:
-                            if chunk:  # Only send non-empty content
+                            if chunk:
+                                collected.append(str(chunk))
                                 yield f"{json.dumps({'response': chunk})}\n"
                     except Exception as e:
                         logging.error(f"Streaming error: {str(e)}")
                         yield f"{json.dumps({'error': str(e)})}\n"
+                    finally:
+                        if request.user_id and request.conversation_id:
+                            append_conversation_history(
+                                request.user_id,
+                                request.conversation_id,
+                                [
+                                    {"role": "user", "content": request.query},
+                                    {
+                                        "role": "assistant",
+                                        "content": "".join(collected),
+                                    },
+                                ],
+                            )
 
             return StreamingResponse(
                 stream_generator(),
