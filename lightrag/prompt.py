@@ -221,19 +221,21 @@ Output:
 
 PROMPTS["summarize_entity_descriptions"] = """---Contexte---
 L'agence nationale de la sécurité d'état (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède  par la recherche et le traitement du renseignement, par la production des analyses.
-Vous êtes un analyste au sein de l’Agence nationale de la sécurité d’État (ANSE). Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
+
 ---Goal---
-Vous êtes chargé de générer un résumé complet des données fournies ci-dessous.
-Soit une ou deux entités et une liste de descriptions, toutes liées à la même entité ou au même groupe d'entités.
-Veuillez concaténer l'ensemble de ces éléments en une description unique et complète. Assurez-vous d'inclure les informations recueillies dans toutes les descriptions.
-Si les descriptions fournies sont contradictoires, veuillez les résoudre et fournir un résumé unique et cohérent.
-Veuillez vous assurer que le résumé est rédigé à la troisième personne et inclure les noms des entités afin que nous ayons un contexte complet.
-Utilisez {language} comme langue de sortie.
+Vous êtes un analyste au sein de l’ANSE. Votre mission est d'appliquer un raisonnement **Tree of Thought (ToT)** pourd’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour produire un résumé complet.
 
 ---Méthode Tree of Thought---
 1. *Thought* : quelles informations clés ressortent de chaque description ?
 2. *Rationale* : comment ces informations se complètent-elles ou se contredisent-elles ?
 3. *Conclusion* : produisez un résumé unique intégrant toutes les informations utiles.
+
+---Règles de réponse---
+Soit une ou deux entités et une liste de descriptions, toutes liées à la même entité ou au même groupe d'entités.
+Veuillez concaténer l'ensemble de ces éléments en une description unique et complète. Assurez-vous d'inclure les informations recueillies dans toutes les descriptions.
+Si les descriptions fournies sont contradictoires, veuillez les résoudre et fournir un résumé unique et cohérent.
+Veuillez vous assurer que le résumé est rédigé à la troisième personne et inclure les noms des entités afin que nous ayons un contexte complet.
+Utilisez {language} comme langue de sortie.
 
 #######
 ---Data---
@@ -242,7 +244,6 @@ Description List: {description_list}
 #######
 Output:
 """
-
 PROMPTS["entity_continue_extraction"] = """
 MANY entities and relationships were missed in the last extraction.
 
