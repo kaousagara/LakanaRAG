@@ -12,6 +12,7 @@ from lightrag.user_profile import (
     load_user_profile,
     update_user_profile,
     record_feedback,
+    record_query_usage,
     get_conversation_history,
     append_conversation_history,
     record_branch_feedback,
@@ -197,6 +198,7 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
                     )
                 else:
                     param.user_profile = load_user_profile(request.user_id)
+                record_query_usage(request.user_id, request.query)
                 param.user_id = request.user_id
                 param.conversation_id = request.conversation_id
                 if request.conversation_history is None and request.conversation_id:

@@ -90,6 +90,15 @@ def record_feedback(
     save_user_profile(user_id, profile)
 
 
+def record_query_usage(user_id: str, query: str) -> None:
+    """Record a query in the user's usage history for implicit feedback."""
+    profile = load_user_profile(user_id)
+    usage = profile.setdefault("query_usage", {})
+    usage[query] = usage.get(query, 0) + 1
+    profile["query_usage"] = usage
+    save_user_profile(user_id, profile)
+
+
 def get_conversation_history(
     user_id: str, conversation_id: str
 ) -> List[Dict[str, Any]]:
@@ -173,4 +182,11 @@ def analyze_behavior(user_id: str) -> Dict[str, Any]:
     errors = sum(
         1 for fb in profile.get("feedback", []) if fb.get("rating") == "negative"
     )
-    return {"top_words": top_words, "negative_feedback": errors}
+    top_queries = sorted(
+        profile.get("query_usage", {}).items(), key=lambda x: x[1], reverse=True
+    )[:5]
+    return {
+        "top_words": top_words,
+        "negative_feedback": errors,
+        "top_queries": top_queries,
+    }

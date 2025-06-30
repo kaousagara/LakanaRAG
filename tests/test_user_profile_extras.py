@@ -8,6 +8,7 @@ from lightrag.user_profile import (
     record_branch_feedback,
     analyze_behavior,
     append_conversation_history,
+    record_query_usage,
 )
 
 
@@ -34,5 +35,8 @@ def test_profile_version_and_tags(monkeypatch):
         append_conversation_history(
             user_id, "c1", [{"role": "user", "content": "hello world"}]
         )
+        record_query_usage(user_id, "hello world")
+        record_query_usage(user_id, "hello world")
         analysis = analyze_behavior(user_id)
         assert analysis["negative_feedback"] >= 0
+        assert analysis["top_queries"][0][0] == "hello world"
