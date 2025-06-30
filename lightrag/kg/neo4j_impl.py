@@ -748,6 +748,20 @@ class Neo4JStorage(BaseGraphStorage):
         """
         properties = node_data
         entity_type = properties["entity_type"]
+        description = properties.get("description", "").strip()
+        source_id = properties.get("source_id")
+        file_path = properties.get("file_path")
+        # Skip creation if description is empty or missing chunk linkage
+        if not description:
+            logger.warning(
+                f"Skip Neo4j node '{node_id}' due to empty description"
+            )
+            return
+        if not source_id and not file_path:
+            logger.warning(
+                f"Skip Neo4j node '{node_id}' due to missing source_id and file_path"
+            )
+            return
         if "entity_id" not in properties:
             raise ValueError("Neo4j: node properties must contain an 'entity_id' field")
 

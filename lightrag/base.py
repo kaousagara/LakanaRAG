@@ -42,13 +42,24 @@ T = TypeVar("T")
 class QueryParam:
     """Configuration parameters for query execution in LightRAG."""
 
-    mode: Literal["local", "global", "hybrid", "naive", "mix", "bypass"] = "global"
+    mode: Literal[
+        "local",
+        "global",
+        "hybrid",
+        "naive",
+        "mix",
+        "bypass",
+        "analyste",
+        "deepsearch",
+    ] = "global"
     """Specifies the retrieval mode:
     - "local": Focuses on context-dependent information.
     - "global": Utilizes global knowledge.
     - "hybrid": Combines local and global retrieval methods.
     - "naive": Performs a basic search without advanced techniques.
     - "mix": Integrates knowledge graph and vector retrieval.
+    - "analyste": Works like hybrid mode but uses an analytical committee prompt.
+    - "deepsearch": Performs a multi step retrieval using Tree of Thought.
     """
 
     only_need_context: bool = False

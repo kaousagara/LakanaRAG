@@ -1346,7 +1346,16 @@ def create_document_routes(
         """
         try:
             # Validate modes if provided
-            valid_modes = ["default", "naive", "local", "global", "hybrid", "mix"]
+            valid_modes = [
+                "default",
+                "naive",
+                "local",
+                "global",
+                "hybrid",
+                "mix",
+                "analyste",
+                "deepsearch",
+            ]
             if request.modes and not all(mode in valid_modes for mode in request.modes):
                 invalid_modes = [
                     mode for mode in request.modes if mode not in valid_modes

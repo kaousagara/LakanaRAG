@@ -446,35 +446,70 @@ async def _merge_nodes_then_upsert(
 
     already_node = await knowledge_graph_inst.get_node(entity_name)
     if already_node:
-        already_entity_types.append(already_node["entity_type"])
-        already_source_ids.extend(
-            split_string_by_multi_markers(already_node["source_id"], [GRAPH_FIELD_SEP])
-        )
-        already_file_paths.extend(
-            split_string_by_multi_markers(already_node["file_path"], [GRAPH_FIELD_SEP])
-        )
-        already_description.append(already_node["description"])
-        if "additional_properties" in already_node:
-            already_additional_properties.append(already_node["additional_properties"])
-        if "entity_community" in already_node:
-            already_entity_communities.append(already_node["entity_community"])
+        entity_type_value = already_node.get("entity_type")
+        if entity_type_value is not None:
+            already_entity_types.append(entity_type_value)
+
+        source_id_value = already_node.get("source_id")
+        if source_id_value:
+            already_source_ids.extend(
+                split_string_by_multi_markers(source_id_value, [GRAPH_FIELD_SEP])
+            )
+
+        file_path_value = already_node.get("file_path")
+        if file_path_value:
+            already_file_paths.extend(
+                split_string_by_multi_markers(file_path_value, [GRAPH_FIELD_SEP])
+            )
+
+        description_value = already_node.get("description")
+        if description_value is not None:
+            already_description.append(description_value)
+
+        additional_prop_value = already_node.get("additional_properties")
+        if additional_prop_value is not None:
+            already_additional_properties.append(additional_prop_value)
+
+        entity_comm_value = already_node.get("entity_community")
+        if entity_comm_value is not None:
+            already_entity_communities.append(entity_comm_value)
 
     entity_type = sorted(
         Counter(
-            [dp["entity_type"] for dp in nodes_data] + already_entity_types
+            [dp.get("entity_type", "UNKNOWN") for dp in nodes_data]
+            + already_entity_types
         ).items(),
         key=lambda x: x[1],
         reverse=True,
     )[0][0]
     description = GRAPH_FIELD_SEP.join(
-        sorted(set([dp["description"] for dp in nodes_data] + already_description))
+        sorted(
+            set([dp.get("description", "") for dp in nodes_data] + already_description)
+        )
     )
+    # Skip creation if description is empty after merging
+    if not description.strip():
+        logger.warning(f"Skip inserting node '{entity_name}' due to empty description")
+        return None
     source_id = GRAPH_FIELD_SEP.join(
-        set([dp["source_id"] for dp in nodes_data] + already_source_ids)
+        set(
+            [dp["source_id"] for dp in nodes_data if dp.get("source_id")]
+            + already_source_ids
+        )
     )
     file_path = GRAPH_FIELD_SEP.join(
-        set([dp["file_path"] for dp in nodes_data] + already_file_paths)
+        set(
+            [dp["file_path"] for dp in nodes_data if dp.get("file_path")]
+            + already_file_paths
+        )
     )
+
+    # Skip creation if node lacks chunk linkage
+    if not source_id and not file_path:
+        logger.warning(
+            f"Skip inserting node '{entity_name}' due to missing source_id and file_path"
+        )
+        return None
 
     additional_properties = GRAPH_FIELD_SEP.join(
         sorted(
@@ -676,16 +711,11 @@ async def _merge_edges_then_upsert(
 
     for need_insert_id in [src_id, tgt_id]:
         if not (await knowledge_graph_inst.has_node(need_insert_id)):
-            # # Discard this edge if the node does not exist
-            # if need_insert_id == src_id:
-            #     logger.warning(
-            #         f"Discard edge: {src_id} - {tgt_id} | Source node missing"
-            #     )
-            # else:
-            #     logger.warning(
-            #         f"Discard edge: {src_id} - {tgt_id} | Target node missing"
-            #     )
-            # return None
+            if not source_id and not file_path:
+                logger.warning(
+                    f"Skip creating node '{need_insert_id}' for edge {src_id}-{tgt_id} due to missing source_id and file_path"
+                )
+                continue
             await knowledge_graph_inst.upsert_node(
                 need_insert_id,
                 node_data={
@@ -766,6 +796,9 @@ async def _merge_association_then_upsert(
     entities = [standardize_entity_name(e) for e in assoc["entities"]]
     assoc_id = compute_mdhash_id("::".join(sorted(entities)), prefix="assoc-")
     description = assoc["description"] + GRAPH_FIELD_SEP + assoc["generalization"]
+    if not description.strip():
+        logger.warning(f"Skip association node '{assoc_id}' due to empty description")
+        return None
 
     node_data = dict(
         entity_id=assoc_id,
@@ -778,6 +811,12 @@ async def _merge_association_then_upsert(
         file_path=assoc.get("file_path", "unknown_source"),
         created_at=int(time.time()),
     )
+
+    if not node_data["source_id"] and not node_data["file_path"]:
+        logger.warning(
+            f"Skip association node '{assoc_id}' due to missing source_id and file_path"
+        )
+        return None
     await knowledge_graph_inst.upsert_node(assoc_id, node_data)
 
     # Link association node to its entities
@@ -833,6 +872,9 @@ async def _merge_multi_hop_then_upsert(
     entities = [standardize_entity_name(e) for e in path["path_entities"]]
     path_id = compute_mdhash_id("->".join(entities), prefix="mh-")
     description = path["path_description"]
+    if not description.strip():
+        logger.warning(f"Skip multi-hop node '{path_id}' due to empty description")
+        return None, []
 
     node_data = dict(
         entity_id=path_id,
@@ -845,6 +887,12 @@ async def _merge_multi_hop_then_upsert(
         file_path=path.get("file_path", "unknown_source"),
         created_at=int(time.time()),
     )
+
+    if not node_data["source_id"] and not node_data["file_path"]:
+        logger.warning(
+            f"Skip multi-hop node '{path_id}' due to missing source_id and file_path"
+        )
+        return None, []
     await knowledge_graph_inst.upsert_node(path_id, node_data)
 
     inserted_edges = []
@@ -944,7 +992,8 @@ async def merge_nodes_and_edges(
                 pipeline_status_lock,
                 llm_response_cache,
             )
-            entities_data.append(entity_data)
+            if entity_data is not None:
+                entities_data.append(entity_data)
 
         # Process and update all relationships at once
         for edge_key, edges in all_edges.items():
@@ -971,7 +1020,8 @@ async def merge_nodes_and_edges(
                     pipeline_status_lock,
                     llm_response_cache,
                 )
-                associations_nodes.append(assoc_node)
+                if assoc_node is not None:
+                    associations_nodes.append(assoc_node)
 
         multi_hop_edges_from_paths = []
         if global_config.get("enable_multi_hop", True):
@@ -984,8 +1034,9 @@ async def merge_nodes_and_edges(
                     pipeline_status_lock,
                     llm_response_cache,
                 )
-                multi_hop_nodes.append(mh_node)
-                multi_hop_edges_from_paths.extend(mh_edges)
+                if mh_node is not None:
+                    multi_hop_nodes.append(mh_node)
+                    multi_hop_edges_from_paths.extend(mh_edges)
 
         # Update total counts
         total_entities_count = len(entities_data)
@@ -2117,11 +2168,13 @@ async def _find_most_related_text_unit_from_entities(
     global_config: dict | None = None,
     llm_response_cache: BaseKVStorage | None = None,
 ):
-    text_units = [
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
-        for dp in node_datas
-        if dp["source_id"] is not None
-    ]
+    text_units = []
+    for dp in node_datas:
+        source_id = dp.get("source_id")
+        if source_id is not None:
+            text_units.append(
+                split_string_by_multi_markers(source_id, [GRAPH_FIELD_SEP])
+            )
 
     node_names = [dp["entity_name"] for dp in node_datas]
     batch_edges_dict = await knowledge_graph_inst.get_nodes_edges_batch(node_names)
@@ -2546,11 +2599,13 @@ async def _find_related_text_unit_from_relationships(
     text_chunks_db: BaseKVStorage,
     knowledge_graph_inst: BaseGraphStorage,
 ):
-    text_units = [
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
-        for dp in edge_datas
-        if dp["source_id"] is not None
-    ]
+    text_units = []
+    for dp in edge_datas:
+        source_id = dp.get("source_id")
+        if source_id is not None:
+            text_units.append(
+                split_string_by_multi_markers(source_id, [GRAPH_FIELD_SEP])
+            )
     all_text_units_lookup = {}
     semaphore = asyncio.Semaphore(CHUNK_FETCH_MAX_CONCURRENCY)
 

@@ -221,19 +221,21 @@ Output:
 
 PROMPTS["summarize_entity_descriptions"] = """---Contexte---
 L'agence nationale de la sécurité d'état (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède  par la recherche et le traitement du renseignement, par la production des analyses.
-Vous êtes un analyste au sein de l’Agence nationale de la sécurité d’État (ANSE). Votre mission est d’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour extraire des entités pertinentes et enrichir une base de données d’intelligence stratégique.
+
 ---Goal---
-Vous êtes chargé de générer un résumé complet des données fournies ci-dessous.
-Soit une ou deux entités et une liste de descriptions, toutes liées à la même entité ou au même groupe d'entités.
-Veuillez concaténer l'ensemble de ces éléments en une description unique et complète. Assurez-vous d'inclure les informations recueillies dans toutes les descriptions.
-Si les descriptions fournies sont contradictoires, veuillez les résoudre et fournir un résumé unique et cohérent.
-Veuillez vous assurer que le résumé est rédigé à la troisième personne et inclure les noms des entités afin que nous ayons un contexte complet.
-Utilisez {language} comme langue de sortie.
+Vous êtes un analyste au sein de l’ANSE. Votre mission est d'appliquer un raisonnement **Tree of Thought (ToT)** sur les documents  pour produire un résumé complet.
 
 ---Méthode Tree of Thought---
 1. *Thought* : quelles informations clés ressortent de chaque description ?
 2. *Rationale* : comment ces informations se complètent-elles ou se contredisent-elles ?
 3. *Conclusion* : produisez un résumé unique intégrant toutes les informations utiles.
+
+---Règles de réponse---
+Soit une ou deux entités et une liste de descriptions, toutes liées à la même entité ou au même groupe d'entités.
+Veuillez concaténer l'ensemble de ces éléments en une description unique et complète. Assurez-vous d'inclure les informations recueillies dans toutes les descriptions.
+Si les descriptions fournies sont contradictoires, veuillez les résoudre et fournir un résumé unique et cohérent.
+Veuillez vous assurer que le résumé est rédigé à la troisième personne et inclure les noms des entités afin que nous ayons un contexte complet.
+Utilisez {language} comme langue de sortie.
 
 #######
 ---Data---
@@ -242,7 +244,6 @@ Description List: {description_list}
 #######
 Output:
 """
-
 PROMPTS["entity_continue_extraction"] = """
 MANY entities and relationships were missed in the last extraction.
 
@@ -587,6 +588,33 @@ N’introduisez **aucune information extérieure**. Tous les éléments utilisé
 - Prompt utilisateur : {user_prompt}
 
 ---Réponse générée---
+"""
+
+PROMPTS["Analyst_response"] = """
+---Contexte---
+L'agence nationale de la sécurité d'État (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela, elle procède à la recherche et au traitement du renseignement, et à la production d'analyses.
+Vous êtes un analyste senior de l'ANSE coordonnant un comité de quatre experts (Cissé, Goumané, Diallo et Traoré). Ils échangent de façon structurée pour répondre à la requête utilisateur en s'appuyant exclusivement sur les données fournies (Knowledge Graph et Document Chunks).
+
+---Goal---
+Simuler un **processus de raisonnement collectif** entre les experts afin de produire une réponse justifiée et claire.
+
+---Règles de raisonnement---
+1. Chaque expert s'exprime à tour de rôle avec son nom et sa spécialité.
+2. Les experts font référence aux apports précédents et ajustent leur raisonnement si nécessaire.
+3. En cas de divergence, ils exposent les contradictions et tentent de les résoudre.
+4. Aucune information ne doit être inventée en dehors du contexte fourni.
+5. Terminer par une section "Conclusion collective" résumant la position commune.
+
+---Conversation History---
+{history}
+
+---Knowledge Graph and Document Chunks---
+{context_data}
+
+---Requête de l'utilisateur---
+{user_prompt}
+
+---Réponse simulée par comité d'experts---
 """
 
 
