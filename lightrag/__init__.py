@@ -5,6 +5,8 @@ from .user_profile import (
     update_user_profile,
     personalize_query,
     record_feedback,
+    get_conversation_history,
+    append_conversation_history,
 )
 
 __all__ = [
@@ -15,6 +17,8 @@ __all__ = [
     "update_user_profile",
     "personalize_query",
     "record_feedback",
+    "get_conversation_history",
+    "append_conversation_history",
 ]
 
 __version__ = "1.3.8"

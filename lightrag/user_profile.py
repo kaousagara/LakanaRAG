@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 from datetime import datetime, timezone
 
 PROFILE_DIR = os.getenv("USER_PROFILE_DIR", "user_profiles")
@@ -74,4 +74,25 @@ def record_feedback(
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     )
+    save_user_profile(user_id, profile)
+
+
+def get_conversation_history(user_id: str) -> List[Dict[str, Any]]:
+    """Return stored conversation history for a user."""
+    profile = load_user_profile(user_id)
+    return profile.get("conversation_history", [])
+
+
+def append_conversation_history(
+    user_id: str,
+    messages: List[Dict[str, str]],
+    max_messages: int = 20,
+) -> None:
+    """Append new messages to a user's conversation history and persist it."""
+    profile = load_user_profile(user_id)
+    history = profile.setdefault("conversation_history", [])
+    history.extend(messages)
+    if len(history) > max_messages:
+        history = history[-max_messages:]
+    profile["conversation_history"] = history
     save_user_profile(user_id, profile)
