@@ -223,7 +223,7 @@ PROMPTS["summarize_entity_descriptions"] = """---Contexte---
 L'agence nationale de la sécurité d'état (ANSE) est un organisme gouvernemental chargé de la protection des intérêts vitaux du Mali dans les domaines sécuritaire, religieux, sociopolitique, économique, etc. Pour cela elle procède  par la recherche et le traitement du renseignement, par la production des analyses.
 
 ---Goal---
-Vous êtes un analyste au sein de l’ANSE. Votre mission est d'appliquer un raisonnement **Tree of Thought (ToT)** pourd’analyser un document (note de renseignement, bulletin quotidien, transcription, etc.) pour produire un résumé complet.
+Vous êtes un analyste au sein de l’ANSE. Votre mission est d'appliquer un raisonnement **Tree of Thought (ToT)** sur les documents  pour produire un résumé complet.
 
 ---Méthode Tree of Thought---
 1. *Thought* : quelles informations clés ressortent de chaque description ?
