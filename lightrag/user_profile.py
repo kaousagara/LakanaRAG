@@ -36,13 +36,26 @@ def save_user_profile(user_id: str, profile: Dict[str, Any]) -> None:
 
 
 def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
-    """Update an existing user profile with new information."""
+    """Update an existing user profile with new information and create a version."""
     profile = load_user_profile(user_id)
+    version = profile.get("_version", 0) + 1
+    history = profile.setdefault("_history", [])
+    if profile:
+        prev = profile.copy()
+        prev.pop("_history", None)
+        history.append(
+            {
+                "version": version - 1,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "profile": prev,
+            }
+        )
     for key, value in updates.items():
         if isinstance(value, dict) and isinstance(profile.get(key), dict):
             profile[key].update(value)
         else:
             profile[key] = value
+    profile["_version"] = version
     save_user_profile(user_id, profile)
     return profile
 
@@ -102,3 +115,62 @@ def append_conversation_history(
     conversations[conversation_id] = history
     profile["conversations"] = conversations
     save_user_profile(user_id, profile)
+
+
+def revert_user_profile(user_id: str, version: int) -> Dict[str, Any]:
+    """Revert profile to a specific version from history."""
+    profile = load_user_profile(user_id)
+    history = profile.get("_history", [])
+    for item in reversed(history):
+        if item.get("version") == version:
+            profile = item["profile"]
+            profile["_version"] = version
+            save_user_profile(user_id, profile)
+            return profile
+    raise ValueError("Version not found")
+
+
+def record_branch_feedback(
+    user_id: str,
+    branch: List[str],
+    rating: Literal["positive", "negative"],
+    notes: Optional[str] = None,
+) -> None:
+    """Store feedback for a specific Tree of Thought branch."""
+    profile = load_user_profile(user_id)
+    entries = profile.setdefault("branch_feedback", [])
+    entries.append(
+        {
+            "branch": branch,
+            "rating": rating,
+            "notes": notes,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    save_user_profile(user_id, profile)
+
+
+def auto_tag_entities(user_id: str, entities: List[str]) -> None:
+    """Automatically tag corrected entities with frequency counters."""
+    profile = load_user_profile(user_id)
+    tags = profile.setdefault("tagged_entities", {})
+    for ent in entities:
+        tags[ent] = tags.get(ent, 0) + 1
+    profile["tagged_entities"] = tags
+    save_user_profile(user_id, profile)
+
+
+def analyze_behavior(user_id: str) -> Dict[str, Any]:
+    """Return simple behavioural metrics extracted from the profile."""
+    profile = load_user_profile(user_id)
+    word_counts: Dict[str, int] = {}
+    for conv in profile.get("conversations", {}).values():
+        for msg in conv:
+            if msg.get("role") == "user":
+                for word in msg.get("content", "").split():
+                    word_counts[word] = word_counts.get(word, 0) + 1
+    top_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    errors = sum(
+        1 for fb in profile.get("feedback", []) if fb.get("rating") == "negative"
+    )
+    return {"top_words": top_words, "negative_feedback": errors}

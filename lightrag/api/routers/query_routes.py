@@ -14,6 +14,10 @@ from lightrag.user_profile import (
     record_feedback,
     get_conversation_history,
     append_conversation_history,
+    record_branch_feedback,
+    auto_tag_entities,
+    analyze_behavior,
+    revert_user_profile,
 )
 from ..utils_api import get_combined_auth_dependency
 from pydantic import BaseModel, Field, field_validator
@@ -143,6 +147,20 @@ class FeedbackRequest(BaseModel):
         return query.strip()
 
 
+class BranchFeedbackRequest(BaseModel):
+    user_id: str = Field(..., description="Identifier of the user")
+    branch: List[str] = Field(..., description="Tree of Thought branch path")
+    rating: Literal["positive", "negative"] = Field(
+        ..., description="User rating for this branch"
+    )
+    notes: Optional[str] = Field(default=None, description="Optional notes")
+
+
+class TagEntitiesRequest(BaseModel):
+    user_id: str = Field(..., description="Identifier of the user")
+    entities: List[str] = Field(..., description="Entities to tag as corrected")
+
+
 class QueryResponse(BaseModel):
     response: str = Field(
         description="The generated response",
@@ -234,6 +252,49 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
                 request.notes,
             )
             return {"status": "success"}
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/branch-feedback", dependencies=[Depends(combined_auth)])
+    async def submit_branch_feedback(request: BranchFeedbackRequest):
+        """Record user feedback for a specific Tree of Thought branch."""
+        try:
+            record_branch_feedback(
+                request.user_id,
+                request.branch,
+                request.rating,
+                request.notes,
+            )
+            return {"status": "success"}
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/entities/tag", dependencies=[Depends(combined_auth)])
+    async def tag_entities(request: TagEntitiesRequest):
+        """Auto-tag entities corrected by the user."""
+        try:
+            auto_tag_entities(request.user_id, request.entities)
+            return {"status": "success"}
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/profile/{user_id}/revert", dependencies=[Depends(combined_auth)])
+    async def profile_revert(user_id: str, version: int):
+        """Revert the user profile to a previous version."""
+        try:
+            return revert_user_profile(user_id, version)
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.get("/profile/{user_id}/analysis", dependencies=[Depends(combined_auth)])
+    async def profile_analysis(user_id: str):
+        """Return simple behavioural analysis for a user."""
+        try:
+            return analyze_behavior(user_id)
         except Exception as e:
             trace_exception(e)
             raise HTTPException(status_code=500, detail=str(e))

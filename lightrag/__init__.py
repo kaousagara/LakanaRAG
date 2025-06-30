@@ -7,6 +7,10 @@ from .user_profile import (
     record_feedback,
     get_conversation_history,
     append_conversation_history,
+    revert_user_profile,
+    record_branch_feedback,
+    auto_tag_entities,
+    analyze_behavior,
 )
 
 __all__ = [
@@ -19,6 +23,10 @@ __all__ = [
     "record_feedback",
     "get_conversation_history",
     "append_conversation_history",
+    "revert_user_profile",
+    "record_branch_feedback",
+    "auto_tag_entities",
+    "analyze_behavior",
 ]
 
 __version__ = "1.3.8"

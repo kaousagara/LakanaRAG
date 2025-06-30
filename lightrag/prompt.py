@@ -411,6 +411,11 @@ Pour générer la réponse finale, appliquez les étapes suivantes :
    - *Rationale*: Priorisez les documents ou relations les plus directement liés à chaque information affirmée.
    - *Conclusion*: Listez jusqu’à 5 références avec format clair : [KG/DC] file_path
 
+6. **Feedback sur les branches ToT**
+   - *Thought*: Quelles branches alternatives ont été explorées ?
+   - *Rationale*: Expliquez brièvement la logique de chaque branche.
+   - *Conclusion*: Résumez chaque branche et invitez l’utilisateur à évaluer sa pertinence.
+
 ---Données disponibles---
 **Historique de conversation**
 {history}
