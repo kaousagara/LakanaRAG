@@ -128,20 +128,6 @@ class FeedbackRequest(BaseModel):
     def query_strip_after(cls, query: str) -> str:
         return query.strip()
 
-    @field_validator("conversation_history", mode="after")
-    @classmethod
-    def conversation_history_role_check(
-        cls, conversation_history: List[Dict[str, Any]] | None
-    ) -> List[Dict[str, Any]] | None:
-        if conversation_history is None:
-            return None
-        for msg in conversation_history:
-            if "role" not in msg or msg["role"] not in {"user", "assistant"}:
-                raise ValueError(
-                    "Each message must have a 'role' key with value 'user' or 'assistant'."
-                )
-        return conversation_history
-
     def to_query_params(self, is_stream: bool) -> "QueryParam":
         """Converts a QueryRequest instance into a QueryParam instance."""
         # Use Pydantic's `.model_dump(exclude_none=True)` to remove None values automatically
