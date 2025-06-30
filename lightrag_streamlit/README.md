@@ -3,7 +3,7 @@
 This Streamlit application offers a simple interface to interact with the LightRAG backend. It mirrors the main features of the React based `lightrag_webui` including:
 
 - Performing RAG queries with all available modes (`local`, `global`, `hybrid`, `naive`, `mix`, `bypass`, `analyste`, `deepsearch`).
-- Streaming responses from the `/query/stream` endpoint.
+- Streaming responses from the `/query/stream` endpoint using the `streamlit-chatbox` component for a conversation view similar to Open WebUI.
 - Uploading and scanning documents.
 - Viewing the knowledge graph.
 

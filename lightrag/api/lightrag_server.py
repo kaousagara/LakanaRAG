@@ -666,6 +666,7 @@ def check_and_install_dependencies():
         "tiktoken",
         "fastapi",
         "streamlit",
+        "streamlit-chatbox",
         # Add other required packages here
     ]
 

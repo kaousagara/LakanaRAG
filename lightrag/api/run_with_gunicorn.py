@@ -26,6 +26,7 @@ def check_and_install_dependencies():
         "tiktoken",
         "psutil",
         "streamlit",
+        "streamlit-chatbox",
         # Add other required packages here
     ]
 

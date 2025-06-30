@@ -2,11 +2,13 @@ import os
 import json
 import requests
 import streamlit as st
-from typing import List, Dict
+from typing import Dict
+from streamlit_chatbox import ChatBox
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # --- Helper functions -------------------------------------------------------
+
 
 def get_headers() -> Dict[str, str]:
     headers = {"Content-Type": "application/json"}
@@ -49,7 +51,9 @@ with st.sidebar.expander("Login", expanded=False):
     pwd = st.text_input("Password", type="password")
     if st.button("Login"):
         try:
-            r = requests.post(f"{BACKEND_URL}/login", data={"username": user, "password": pwd})
+            r = requests.post(
+                f"{BACKEND_URL}/login", data={"username": user, "password": pwd}
+            )
             r.raise_for_status()
             data = r.json()
             st.session_state.token = data.get("access_token", "")
@@ -64,52 +68,55 @@ page = st.sidebar.selectbox("Page", ["Chat", "Documents", "Graph"])
 
 if page == "Chat":
     st.header("Chat with LightRAG")
-    if "messages" not in st.session_state:
-        st.session_state.messages = []  # type: List[Dict[str, str]]
+
+    if "chat_box" not in st.session_state:
+        st.session_state.chat_box = ChatBox()
+    chat_box: ChatBox = st.session_state.chat_box
 
     mode = st.selectbox(
         "Mode",
-        ["naive", "local", "global", "hybrid", "mix", "bypass", "analyste", "deepsearch"],
+        [
+            "naive",
+            "local",
+            "global",
+            "hybrid",
+            "mix",
+            "bypass",
+            "analyste",
+            "deepsearch",
+        ],
         index=3,
     )
-    query = st.text_area("Your question")
     stream = st.checkbox("Stream", value=True)
-    if st.button("Send") and query.strip():
-        param = {
-            "query": query,
-            "mode": mode,
-            "stream": stream,
-        }
-        st.session_state.messages.append({"role": "user", "content": query})
-        placeholder = st.empty()
-        collected = ""
+
+    chat_box.output_messages()
+    if prompt := st.chat_input("Your question"):
+        chat_box.user_say(prompt)
+        param = {"query": prompt, "mode": mode, "stream": stream}
         try:
             if stream:
                 url = f"{BACKEND_URL}/query/stream"
-                with requests.post(url, headers=get_headers(), json=param, stream=True) as r:
+                chat_box.ai_say("")
+                with requests.post(
+                    url, headers=get_headers(), json=param, stream=True
+                ) as r:
                     r.raise_for_status()
+                    collected = ""
                     for line in r.iter_lines():
                         if line:
                             try:
                                 data = json.loads(line.decode("utf-8"))
                                 chunk = data.get("response", "")
                                 collected += chunk
-                                placeholder.markdown(collected)
+                                chat_box.update_msg(chunk, streaming=True)
                             except Exception:
                                 pass
-                st.session_state.messages.append({"role": "assistant", "content": collected})
+                chat_box.update_msg("", streaming=False)
             else:
                 resp = post_json("/query", param)
-                st.session_state.messages.append({"role": "assistant", "content": resp.get("response", "")})
+                chat_box.ai_say(resp.get("response", ""))
         except Exception as e:
             st.error(str(e))
-
-    # Show history
-    for m in st.session_state.messages:
-        if m["role"] == "user":
-            st.markdown(f"**User:** {m['content']}")
-        else:
-            st.markdown(f"**Assistant:** {m['content']}")
 
 
 # --- Document Management Page ---------------------------------------------
@@ -130,7 +137,9 @@ elif page == "Documents":
     with cols[2]:
         if st.button("Clear All"):
             try:
-                requests.delete(f"{BACKEND_URL}/documents", headers=get_headers()).raise_for_status()
+                requests.delete(
+                    f"{BACKEND_URL}/documents", headers=get_headers()
+                ).raise_for_status()
                 st.success("Documents cleared")
             except Exception as e:
                 st.error(str(e))
@@ -169,7 +178,9 @@ else:  # Graph
     max_nodes = st.number_input("Max Nodes", 10, 500, 100)
     if st.button("Load Graph"):
         try:
-            graph = get_json(f"/graphs?label={label}&max_depth={depth}&max_nodes={max_nodes}")
+            graph = get_json(
+                f"/graphs?label={label}&max_depth={depth}&max_nodes={max_nodes}"
+            )
             import networkx as nx
             from pyvis.network import Network
 
