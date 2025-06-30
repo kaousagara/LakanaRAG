@@ -5,6 +5,7 @@ import { throttle } from '@/lib/utils'
 import { queryText, queryTextStream } from '@/api/lightrag'
 import { errorMessage } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/state'
 import { useDebounce } from '@/hooks/useDebounce'
 import QuerySettings from '@/components/retrieval/QuerySettings'
 import { ChatMessage, MessageWithError } from '@/components/retrieval/ChatMessage'
@@ -66,6 +67,12 @@ export default function RetrievalTesting() {
   const isReceivingResponseRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!useSettingsStore.getState().conversationId) {
+      useSettingsStore.getState().setConversationId(generateUniqueId())
+    }
+  }, [])
 
   // Scroll to bottom function - restored smooth scrolling with better handling
   const scrollToBottom = useCallback(() => {
@@ -198,6 +205,7 @@ export default function RetrievalTesting() {
 
       // Prepare query parameters
       const state = useSettingsStore.getState()
+      const auth = useAuthStore.getState()
       const queryParams = {
         ...state.querySettings,
         query: actualQuery,
@@ -205,6 +213,9 @@ export default function RetrievalTesting() {
           .filter((m) => m.isError !== true)
           .slice(-(state.querySettings.history_turns || 0) * 2)
           .map((m) => ({ role: m.role, content: m.content })),
+        conversation_id: state.conversationId,
+        user_profile: state.userProfile,
+        user_id: auth.username || undefined,
         ...(modeOverride ? { mode: modeOverride } : {})
       }
 
@@ -322,6 +333,7 @@ export default function RetrievalTesting() {
   const clearMessages = useCallback(() => {
     setMessages([])
     useSettingsStore.getState().setRetrievalHistory([])
+    useSettingsStore.getState().setConversationId(generateUniqueId())
   }, [setMessages])
 
   return (

@@ -4,6 +4,9 @@ import { createSelectors } from '@/lib/utils'
 import { defaultQueryLabel } from '@/lib/constants'
 import { Message, QueryRequest } from '@/api/lightrag'
 
+const generateConversationId = (): string =>
+  `conv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
 type Theme = 'dark' | 'light' | 'system'
 type Language = 'en' | 'zh' | 'fr' | 'ar' | 'zh_TW'
 type Tab = 'documents' | 'knowledge-graph' | 'retrieval' | 'api' | 'accounts'
@@ -48,8 +51,14 @@ interface SettingsState {
   retrievalHistory: Message[]
   setRetrievalHistory: (history: Message[]) => void
 
-  querySettings: Omit<QueryRequest, 'query'>
+  querySettings: Omit<QueryRequest, 'query' | 'conversation_history' | 'user_profile' | 'conversation_id' | 'user_id'>
   updateQuerySettings: (settings: Partial<QueryRequest>) => void
+
+  conversationId: string
+  setConversationId: (id: string) => void
+
+  userProfile: Record<string, any>
+  updateUserProfile: (profile: Record<string, any>) => void
 
   // Auth settings
   apiKey: string | null
@@ -102,6 +111,9 @@ const useSettingsStoreBase = create<SettingsState>()(
       showFileName: false,
 
       retrievalHistory: [],
+
+      conversationId: generateConversationId(),
+      userProfile: {},
 
       querySettings: {
         mode: 'global',
@@ -162,13 +174,18 @@ const useSettingsStoreBase = create<SettingsState>()(
           querySettings: { ...state.querySettings, ...settings }
         })),
 
+      setConversationId: (id: string) => set({ conversationId: id }),
+
+      updateUserProfile: (profile: Record<string, any>) =>
+        set((state) => ({ userProfile: { ...state.userProfile, ...profile } })),
+
       setShowFileName: (show: boolean) => set({ showFileName: show }),
       setShowLegend: (show: boolean) => set({ showLegend: show })
     }),
     {
       name: 'settings-storage',
       storage: createJSONStorage(() => localStorage),
-      version: 13,
+      version: 14,
       migrate: (state: any, version: number) => {
         if (version < 2) {
           state.showEdgeLabel = false
@@ -231,6 +248,10 @@ const useSettingsStoreBase = create<SettingsState>()(
           if (state.querySettings) {
             state.querySettings.user_prompt = ''
           }
+        }
+        if (version < 14) {
+          state.conversationId = generateConversationId()
+          state.userProfile = {}
         }
         return state
       }
