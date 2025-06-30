@@ -8,6 +8,11 @@ from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from lightrag.base import QueryParam
+from lightrag.user_profile import (
+    load_user_profile,
+    update_user_profile,
+    record_feedback,
+)
 from ..utils_api import get_combined_auth_dependency
 from pydantic import BaseModel, Field, field_validator
 
@@ -96,6 +101,28 @@ class QueryRequest(BaseModel):
         description="User-provided prompt for the query. If provided, this will be used instead of the default value from prompt template.",
     )
 
+    user_profile: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Profile information about the user issuing the query.",
+    )
+
+    user_id: Optional[str] = Field(
+        default=None,
+        description="Identifier used to load and persist the user profile.",
+    )
+
+
+class FeedbackRequest(BaseModel):
+    user_id: str = Field(..., description="Identifier of the user")
+    query: str = Field(..., description="Original query")
+    response: str = Field(..., description="System response")
+    rating: Literal["positive", "negative"] = Field(
+        ..., description="Explicit user rating"
+    )
+    notes: Optional[str] = Field(
+        default=None, description="Optional feedback notes from the user"
+    )
+
     @field_validator("query", mode="after")
     @classmethod
     def query_strip_after(cls, query: str) -> str:
@@ -155,6 +182,17 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
         """
         try:
             param = request.to_query_params(False)
+            if request.user_id:
+                if request.user_profile is not None:
+                    param.user_profile = update_user_profile(
+                        request.user_id, request.user_profile
+                    )
+                else:
+                    param.user_profile = load_user_profile(request.user_id)
+                param.user_id = request.user_id
+            elif request.user_profile:
+                param.user_profile = request.user_profile
+
             response = await rag.aquery(request.query, param=param)
 
             # If response is a string (e.g. cache hit), return directly
@@ -166,6 +204,22 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
                 return QueryResponse(response=result)
             else:
                 return QueryResponse(response=str(response))
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/feedback", dependencies=[Depends(combined_auth)])
+    async def submit_feedback(request: FeedbackRequest):
+        """Record explicit user feedback for a query response."""
+        try:
+            record_feedback(
+                request.user_id,
+                request.query,
+                request.response,
+                request.rating,
+                request.notes,
+            )
+            return {"status": "success"}
         except Exception as e:
             trace_exception(e)
             raise HTTPException(status_code=500, detail=str(e))
@@ -184,6 +238,17 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
         """
         try:
             param = request.to_query_params(True)
+            if request.user_id:
+                if request.user_profile is not None:
+                    param.user_profile = update_user_profile(
+                        request.user_id, request.user_profile
+                    )
+                else:
+                    param.user_profile = load_user_profile(request.user_id)
+                param.user_id = request.user_id
+            elif request.user_profile:
+                param.user_profile = request.user_profile
+
             response = await rag.aquery(request.query, param=param)
 
             from fastapi.responses import StreamingResponse
