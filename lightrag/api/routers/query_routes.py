@@ -111,6 +111,13 @@ class QueryRequest(BaseModel):
         description="Identifier used to load and persist the user profile.",
     )
 
+    def to_query_params(self, is_stream: bool) -> "QueryParam":
+        """Convert this model into a :class:`QueryParam`."""
+        request_data = self.model_dump(exclude_none=True, exclude={"query"})
+        param = QueryParam(**request_data)
+        param.stream = is_stream
+        return param
+
 
 class FeedbackRequest(BaseModel):
     user_id: str = Field(..., description="Identifier of the user")
@@ -127,16 +134,6 @@ class FeedbackRequest(BaseModel):
     @classmethod
     def query_strip_after(cls, query: str) -> str:
         return query.strip()
-
-    def to_query_params(self, is_stream: bool) -> "QueryParam":
-        """Converts a QueryRequest instance into a QueryParam instance."""
-        # Use Pydantic's `.model_dump(exclude_none=True)` to remove None values automatically
-        request_data = self.model_dump(exclude_none=True, exclude={"query"})
-
-        # Ensure `mode` and `stream` are set explicitly
-        param = QueryParam(**request_data)
-        param.stream = is_stream
-        return param
 
 
 class QueryResponse(BaseModel):
