@@ -12,6 +12,7 @@ import { ChatMessage, MessageWithError } from '@/components/retrieval/ChatMessag
 import { EraserIcon, SendIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { QueryMode } from '@/api/lightrag'
+import ConversationSidebar from '@/components/retrieval/ConversationSidebar'
 
 // Helper function to generate unique IDs with browser compatibility
 const generateUniqueId = () => {
@@ -68,11 +69,28 @@ export default function RetrievalTesting() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
+  const currentConversationId = useSettingsStore((s) => s.conversationId)
+
   useEffect(() => {
-    if (!useSettingsStore.getState().conversationId) {
-      useSettingsStore.getState().setConversationId(generateUniqueId())
+    const store = useSettingsStore.getState()
+    if (!store.conversationId || !(store.conversationId in store.conversations)) {
+      store.createConversation()
     }
   }, [])
+
+  useEffect(() => {
+    const history = useSettingsStore.getState().retrievalHistory || []
+    setMessages(
+      history.map((msg, index) => {
+        const msgWithError = msg as MessageWithError
+        return {
+          ...msg,
+          id: msgWithError.id || `hist-${Date.now()}-${index}`,
+          mermaidRendered: msgWithError.mermaidRendered ?? true,
+        }
+      })
+    )
+  }, [currentConversationId])
 
   // Scroll to bottom function - restored smooth scrolling with better handling
   const scrollToBottom = useCallback(() => {
@@ -333,11 +351,11 @@ export default function RetrievalTesting() {
   const clearMessages = useCallback(() => {
     setMessages([])
     useSettingsStore.getState().setRetrievalHistory([])
-    useSettingsStore.getState().setConversationId(generateUniqueId())
   }, [setMessages])
 
   return (
     <div className="flex size-full gap-2 px-2 pb-12 overflow-hidden">
+      <ConversationSidebar />
       <div className="flex grow flex-col gap-4">
         <div className="relative grow">
           <div

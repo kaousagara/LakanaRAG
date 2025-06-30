@@ -375,5 +375,11 @@
     "description": "Veuillez entrer votre clé API pour accéder au service",
     "placeholder": "Entrez votre clé API",
     "save": "Sauvegarder"
+  },
+  "conversationSidebar": {
+    "title": "Conversations",
+    "new": "Nouveau",
+    "delete": "Supprimer",
+    "untitled": "Conversation {{index}}"
   }
 }

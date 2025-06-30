@@ -375,5 +375,11 @@
     "description": "Please enter your API key to access the service",
     "placeholder": "Enter your API key",
     "save": "Save"
+  },
+  "conversationSidebar": {
+    "title": "Conversations",
+    "new": "New",
+    "delete": "Delete",
+    "untitled": "Conversation {{index}}"
   }
 }
