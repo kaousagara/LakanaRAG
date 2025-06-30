@@ -377,6 +377,9 @@ Générez une réponse claire et rigoureuse à la requête utilisateur en appliq
 - des consignes de réponse
 N'introduisez **aucune information extérieure non justifiée par la base de connaissances fournie**.
 
+---Profil utilisateur---
+{user_profile}
+
 ---Méthode de Raisonnement Tree of Thought (ToT)---
 
 Pour générer la réponse finale, appliquez les étapes suivantes :
@@ -542,7 +545,12 @@ En vous appuyant exclusivement sur les Document Chunks fournis, appliquez un **r
 - Synthétiser les informations de façon claire et structurée
 - Produire une réponse complète sans extrapolation
 
+Produire une réponse complète sans extrapolation
+
 N’introduisez **aucune information extérieure**. Tous les éléments utilisés doivent provenir explicitement des Document Chunks.
+
+---Profil utilisateur---
+{user_profile}
 
 ---Méthode de Raisonnement Tree of Thought (ToT)---
 
