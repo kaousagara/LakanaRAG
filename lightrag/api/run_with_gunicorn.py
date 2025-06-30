@@ -6,6 +6,7 @@ Start LightRAG server with Gunicorn
 import os
 import sys
 import signal
+import subprocess
 import pipmaster as pm
 from lightrag.api.utils_api import display_splash_screen, check_env_file
 from lightrag.api.config import global_args
@@ -24,6 +25,7 @@ def check_and_install_dependencies():
         "gunicorn",
         "tiktoken",
         "psutil",
+        "streamlit",
         # Add other required packages here
     ]
 
@@ -32,6 +34,9 @@ def check_and_install_dependencies():
             print(f"Installing {package}...")
             pm.install(package)
             print(f"{package} installed successfully")
+
+
+streamlit_process = None
 
 
 # Signal handler for graceful shutdown
@@ -43,6 +48,9 @@ def signal_handler(sig, frame):
 
     # Release shared resources
     finalize_share_data()
+    if streamlit_process and streamlit_process.poll() is None:
+        streamlit_process.terminate()
+        streamlit_process.wait()
 
     # Exit with success status
     sys.exit(0)
@@ -75,6 +83,35 @@ def main():
 
     # Import Gunicorn's StandaloneApplication
     from gunicorn.app.base import BaseApplication
+
+    def start_streamlit():
+        global streamlit_process
+        streamlit_cmd = [
+            "streamlit",
+            "run",
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "..",
+                    "..",
+                    "lightrag_streamlit",
+                    "app.py",
+                )
+            ),
+            "--server.headless",
+            "true",
+            "--server.port",
+            str(os.getenv("STREAMLIT_PORT", 8501)),
+        ]
+        env = os.environ.copy()
+        env.setdefault("BACKEND_URL", f"http://{global_args.host}:{global_args.port}")
+        try:
+            streamlit_process = subprocess.Popen(streamlit_cmd, env=env)
+            print(
+                f"Streamlit UI available at http://{env.get('STREAMLIT_HOST', 'localhost')}:{env.get('STREAMLIT_PORT', 8501)}"
+            )
+        except FileNotFoundError:
+            print("Streamlit not installed or not found, skipping Streamlit UI")
 
     # Define a custom application class that loads our config
     class GunicornApp(BaseApplication):
@@ -209,6 +246,8 @@ def main():
     # Create the application
     app = GunicornApp("")
 
+    start_streamlit()
+
     # Force workers to be an integer and greater than 1 for multi-process mode
     workers_count = global_args.workers
     if workers_count > 1:
@@ -221,6 +260,10 @@ def main():
     # Run the application
     print("\nStarting Gunicorn with direct Python API...")
     app.run()
+
+    if streamlit_process and streamlit_process.poll() is None:
+        streamlit_process.terminate()
+        streamlit_process.wait()
 
 
 if __name__ == "__main__":
