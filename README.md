@@ -323,7 +323,7 @@ class QueryParam:
 
     user_prompt: str | None = None
     """User-provided prompt for the query.
-    If proivded, this will be use instead of the default vaulue from prompt template.
+    If provided, this will be used instead of the default value from the prompt template.
     """
 ```
 
