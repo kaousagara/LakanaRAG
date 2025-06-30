@@ -15,4 +15,4 @@ streamlit run lightrag_streamlit/app.py
 
 Set the `BACKEND_URL` environment variable if the LightRAG API is not running on `http://localhost:8000`.
 
-When launching the backend using `lightrag-server` or `lightrag-gunicorn`, the Streamlit UI is started automatically and will be available at `http://localhost:8501` by default.
+Alternatively launch the UI with the `lightrag-streamlit` command which runs the app on `http://localhost:8501` by default.

@@ -11,7 +11,6 @@ import uvicorn
 import pipmaster as pm
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
-import subprocess
 from pathlib import Path
 import configparser
 from ascii_colors import ASCIIColors
@@ -665,8 +664,6 @@ def check_and_install_dependencies():
         "uvicorn",
         "tiktoken",
         "fastapi",
-        "streamlit",
-        "streamlit-chatbox",
         # Add other required packages here
     ]
 
@@ -675,35 +672,6 @@ def check_and_install_dependencies():
             print(f"Installing {package}...")
             pm.install(package)
             print(f"{package} installed successfully")
-
-
-streamlit_process = None
-
-
-def start_streamlit():
-    global streamlit_process
-    streamlit_cmd = [
-        "streamlit",
-        "run",
-        os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__), "..", "..", "lightrag_streamlit", "app.py"
-            )
-        ),
-        "--server.headless",
-        "true",
-        "--server.port",
-        str(os.getenv("STREAMLIT_PORT", 8501)),
-    ]
-    env = os.environ.copy()
-    env.setdefault("BACKEND_URL", f"http://{global_args.host}:{global_args.port}")
-    try:
-        streamlit_process = subprocess.Popen(streamlit_cmd, env=env)
-        print(
-            f"Streamlit UI available at http://{env.get('STREAMLIT_HOST', 'localhost')}:{env.get('STREAMLIT_PORT', 8501)}"
-        )
-    except FileNotFoundError:
-        print("Streamlit not installed or not found, skipping Streamlit UI")
 
 
 def main():
@@ -732,8 +700,6 @@ def main():
     # Create application instance directly instead of using factory function
     app = create_app(global_args)
 
-    start_streamlit()
-
     # Start Uvicorn in single process mode
     uvicorn_config = {
         "app": app,  # Pass application instance directly instead of string path
@@ -754,10 +720,6 @@ def main():
         f"Starting Uvicorn server in single-process mode on {global_args.host}:{global_args.port}"
     )
     uvicorn.run(**uvicorn_config)
-
-    if streamlit_process and streamlit_process.poll() is None:
-        streamlit_process.terminate()
-        streamlit_process.wait()
 
 
 if __name__ == "__main__":

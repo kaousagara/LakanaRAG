@@ -102,6 +102,7 @@ setuptools.setup(
             "lightrag-server=lightrag.api.lightrag_server:main [api]",
             "lightrag-gunicorn=lightrag.api.run_with_gunicorn:main [api]",
             "lightrag-viewer=lightrag.tools.lightrag_visualizer.graph_visualizer:main [tools]",
+            "lightrag-streamlit=lightrag.api.run_streamlit:main [api]",
         ],
     },
 )
