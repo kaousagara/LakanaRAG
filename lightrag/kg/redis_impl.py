@@ -90,6 +90,14 @@ class RedisKVStorage(BaseKVStorage):
             except json.JSONDecodeError as e:
                 logger.error(f"JSON decode error for id {id}: {e}")
                 return None
+            except RedisError as e:
+                logger.error(f"Redis operation error in {self.namespace}: {e}")
+                return None
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error in Redis operation for {self.namespace}: {e}"
+                )
+                return None
 
     async def get_by_ids(self, ids: list[str]) -> list[dict[str, Any]]:
         async with self._get_redis_connection() as redis:
@@ -101,6 +109,14 @@ class RedisKVStorage(BaseKVStorage):
                 return [json.loads(result) if result else None for result in results]
             except json.JSONDecodeError as e:
                 logger.error(f"JSON decode error in batch get: {e}")
+                return [None] * len(ids)
+            except RedisError as e:
+                logger.error(f"Redis operation error in {self.namespace}: {e}")
+                return [None] * len(ids)
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error in Redis operation for {self.namespace}: {e}"
+                )
                 return [None] * len(ids)
 
     async def filter_keys(self, keys: set[str]) -> set[str]:
@@ -127,9 +143,14 @@ class RedisKVStorage(BaseKVStorage):
 
                 for k in data:
                     data[k]["_id"] = k
-            except json.JSONEncodeError as e:
+            except TypeError as e:
                 logger.error(f"JSON encode error during upsert: {e}")
-                raise
+            except RedisError as e:
+                logger.error(f"Redis operation error in {self.namespace}: {e}")
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error in Redis operation for {self.namespace}: {e}"
+                )
 
     async def index_done_callback(self) -> None:
         # Redis handles persistence automatically
