@@ -128,6 +128,15 @@ class QueryParam:
     conversation_id: str | None = None
     """Identifier of the current conversation for storing history."""
 
+    degree_threshold: int = 0
+    """Minimum degree required for entities or relations to be considered."""
+
+    similarity_threshold: float = 0.6
+    """Maximum cosine distance allowed for retrieved vectors."""
+
+    categories: list[str] = field(default_factory=list)
+    """Filter results to only these semantic categories if provided."""
+
 
 @dataclass
 class StorageNameSpace(ABC):

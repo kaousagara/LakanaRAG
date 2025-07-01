@@ -575,7 +575,7 @@ async def _merge_nodes_then_upsert(
 
     if num_fragment > 1:
         if num_fragment >= force_llm_summary_on_merge:
-            status_message = f"LLM merge N: {entity_name} | {num_new_fragment}+{num_fragment-num_new_fragment}"
+            status_message = f"LLM merge N: {entity_name} | {num_new_fragment}+{num_fragment - num_new_fragment}"
             logger.info(status_message)
             if pipeline_status is not None and pipeline_status_lock is not None:
                 async with pipeline_status_lock:
@@ -590,7 +590,7 @@ async def _merge_nodes_then_upsert(
                 llm_response_cache,
             )
         else:
-            status_message = f"Merge N: {entity_name} | {num_new_fragment}+{num_fragment-num_new_fragment}"
+            status_message = f"Merge N: {entity_name} | {num_new_fragment}+{num_fragment - num_new_fragment}"
             logger.info(status_message)
             if pipeline_status is not None and pipeline_status_lock is not None:
                 async with pipeline_status_lock:
@@ -738,7 +738,7 @@ async def _merge_edges_then_upsert(
 
     if num_fragment > 1:
         if num_fragment >= force_llm_summary_on_merge:
-            status_message = f"LLM merge E: {src_id} - {tgt_id} | {num_new_fragment}+{num_fragment-num_new_fragment}"
+            status_message = f"LLM merge E: {src_id} - {tgt_id} | {num_new_fragment}+{num_fragment - num_new_fragment}"
             logger.info(status_message)
             if pipeline_status is not None and pipeline_status_lock is not None:
                 async with pipeline_status_lock:
@@ -753,7 +753,7 @@ async def _merge_edges_then_upsert(
                 llm_response_cache,
             )
         else:
-            status_message = f"Merge E: {src_id} - {tgt_id} | {num_new_fragment}+{num_fragment-num_new_fragment}"
+            status_message = f"Merge E: {src_id} - {tgt_id} | {num_new_fragment}+{num_fragment - num_new_fragment}"
             logger.info(status_message)
             if pipeline_status is not None and pipeline_status_lock is not None:
                 async with pipeline_status_lock:
@@ -1068,7 +1068,7 @@ async def merge_nodes_and_edges(
                     "entity_name": dp["entity_name"],
                     "entity_type": dp.get("entity_type", "UNKNOWN"),
                     "content": _truncate_content(
-                        f"{dp['entity_name']}\n{dp['description']}\n{dp.get('additional_properties','')}\n{dp.get('entity_community','')}"
+                        f"{dp['entity_name']}\n{dp['description']}\n{dp.get('additional_properties', '')}\n{dp.get('entity_community', '')}"
                     ),
                     "source_id": dp.get("source_id"),
                     "file_path": dp.get("file_path", "unknown_source"),
@@ -1100,7 +1100,7 @@ async def merge_nodes_and_edges(
                     "tgt_id": e["tgt_id"],
                     "keywords": e.get("keywords", ""),
                     "content": _truncate_content(
-                        f"{e['src_id']}\t{e['tgt_id']}\n{e.get('keywords','')}\n{e.get('description','')}"
+                        f"{e['src_id']}\t{e['tgt_id']}\n{e.get('keywords', '')}\n{e.get('description', '')}"
                     ),
                     "source_id": e.get("source_id"),
                     "file_path": e.get("file_path", "unknown_source"),
@@ -1183,7 +1183,7 @@ async def merge_nodes_and_edges(
                         "entity_name": node_id,
                         "entity_type": entity_type,
                         "content": _truncate_content(
-                            f"{node_id}\n{node.get('description','')}\n{node.get('additional_properties','')}\n{comm}"
+                            f"{node_id}\n{node.get('description', '')}\n{node.get('additional_properties', '')}\n{comm}"
                         ),
                         "source_id": node.get("source_id"),
                         "file_path": node.get("file_path", "unknown_source"),
@@ -1744,6 +1744,8 @@ async def _get_vector_context(
     chunks_vdb: BaseVectorStorage,
     query_param: QueryParam,
     tokenizer: Tokenizer,
+    global_config: dict | None = None,
+    llm_response_cache: BaseKVStorage | None = None,
 ) -> tuple[list, list, list] | None:
     """
     Retrieve vector context from the vector database.
@@ -1806,7 +1808,17 @@ async def _get_vector_context(
 
         # Create text_units_context directly as a list of dictionaries
         text_units_context = []
+        summary_tokens = 500
+        if global_config is not None:
+            summary_tokens = global_config.get("summary_to_max_tokens", 500)
         for i, chunk in enumerate(maybe_trun_chunks):
+            if len(tokenizer.encode(chunk["content"])) > summary_tokens:
+                chunk["content"] = await _handle_entity_relation_summary(
+                    "chunk",
+                    chunk["content"],
+                    global_config or {},
+                    llm_response_cache=llm_response_cache,
+                )
             text_units_context.append(
                 {
                     "id": i + 1,
@@ -1904,10 +1916,12 @@ async def _build_query_context(
 
             # Get vector context in triple format
             vector_data = await _get_vector_context(
-                query_param.original_query,  # We need to pass the original query
+                query_param.original_query,
                 chunks_vdb,
                 query_param,
                 tokenizer,
+                global_config,
+                llm_response_cache,
             )
 
             # If vector_data is not None, unpack it
@@ -2042,16 +2056,32 @@ async def _get_node_data(
     if not all([n is not None for n in node_datas]):
         logger.warning("Some nodes are missing, maybe the storage is damaged")
 
-    node_datas = [
-        {
-            **n,
-            "entity_name": k["entity_name"],
-            "rank": d,
-            "created_at": k.get("created_at"),
-        }
-        for k, n, d in zip(results, node_datas, node_degrees)
-        if n is not None
-    ]  # what is this text_chunks_db doing.  dont remember it in airvx.  check the diagram.
+    filtered_nodes = []
+    cat_filter = [c.lower() for c in query_param.categories]
+    for k, n, d in zip(results, node_datas, node_degrees):
+        if n is None:
+            continue
+        if query_param.degree_threshold and d < query_param.degree_threshold:
+            continue
+        if (
+            query_param.similarity_threshold
+            and k.get("distance", 1.0) > query_param.similarity_threshold
+        ):
+            continue
+        if cat_filter:
+            comm = str(n.get("entity_community", "")).lower()
+            if comm not in cat_filter:
+                continue
+        filtered_nodes.append(
+            {
+                **n,
+                "entity_name": k["entity_name"],
+                "rank": d,
+                "created_at": k.get("created_at"),
+            }
+        )
+
+    node_datas = filtered_nodes
 
     for nd in node_datas:
         score = 0.0
@@ -2410,25 +2440,38 @@ async def _get_edge_data(
 
     # Reconstruct edge_datas list in the same order as results.
     edge_datas = []
+    cat_filter = [c.lower() for c in query_param.categories]
     for k in results:
         pair = (k["src_id"], k["tgt_id"])
         edge_props = edge_data_dict.get(pair)
-        if edge_props is not None:
-            if "weight" not in edge_props:
-                logger.warning(
-                    f"Edge {pair} missing 'weight' attribute, using default value 0.0"
-                )
-                edge_props["weight"] = 0.0
+        if edge_props is None:
+            continue
+        deg = edge_degrees_dict.get(pair, k.get("rank", 0))
+        if query_param.degree_threshold and deg < query_param.degree_threshold:
+            continue
+        if (
+            query_param.similarity_threshold
+            and k.get("distance", 1.0) > query_param.similarity_threshold
+        ):
+            continue
+        if cat_filter:
+            kw = str(edge_props.get("keywords", "")).lower()
+            if not any(c in kw for c in cat_filter):
+                continue
+        if "weight" not in edge_props:
+            logger.warning(
+                f"Edge {pair} missing 'weight' attribute, using default value 0.0"
+            )
+            edge_props["weight"] = 0.0
 
-            # Use edge degree from the batch as rank.
-            combined = {
-                "src_id": k["src_id"],
-                "tgt_id": k["tgt_id"],
-                "rank": edge_degrees_dict.get(pair, k.get("rank", 0)),
-                "created_at": k.get("created_at", None),
-                **edge_props,
-            }
-            edge_datas.append(combined)
+        combined = {
+            "src_id": k["src_id"],
+            "tgt_id": k["tgt_id"],
+            "rank": deg,
+            "created_at": k.get("created_at", None),
+            **edge_props,
+        }
+        edge_datas.append(combined)
 
     tokenizer: Tokenizer = text_chunks_db.global_config.get("tokenizer")
     edge_datas = sorted(
@@ -2760,7 +2803,12 @@ async def naive_query(
     tokenizer: Tokenizer = global_config["tokenizer"]
 
     _, _, text_units_context = await _get_vector_context(
-        query, chunks_vdb, query_param, tokenizer
+        query,
+        chunks_vdb,
+        query_param,
+        tokenizer,
+        global_config,
+        hashing_kv,
     )
 
     if text_units_context is None or len(text_units_context) == 0:
