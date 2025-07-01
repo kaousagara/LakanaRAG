@@ -68,11 +68,19 @@ class MilvusVectorDBStorage(BaseVectorStorage):
             ),
             db_name=db_name,
         )
-        if db_name and db_name not in db.list_database():
+
+        if db_name:
+            alias = self._client._using
             try:
-                db.create_database(db_name)
+                databases = db.list_database(using=alias)
             except Exception as e:
-                logger.error(f"Unable to create database {db_name}: {e}")
+                logger.error(f"Unable to list databases: {e}")
+                databases = []
+            if db_name not in databases:
+                try:
+                    db.create_database(db_name, using=alias)
+                except Exception as e:
+                    logger.error(f"Unable to create database {db_name}: {e}")
             self._client.using_database(db_name)
         self._max_batch_size = self.global_config["embedding_batch_num"]
         MilvusVectorDBStorage.create_collection_if_not_exist(
