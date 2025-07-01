@@ -1911,6 +1911,9 @@ async def _build_query_context(
 
         # Only get vector data if in mix mode
         if query_param.mode == "mix" and hasattr(query_param, "original_query"):
+            if chunks_vdb is None:
+                raise ValueError("chunks_vdb must be provided for mix mode")
+
             # Get tokenizer from text_chunks_db
             tokenizer = text_chunks_db.global_config.get("tokenizer")
 
