@@ -5,12 +5,14 @@ import { throttle } from '@/lib/utils'
 import { queryText, queryTextStream } from '@/api/lightrag'
 import { errorMessage } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/state'
 import { useDebounce } from '@/hooks/useDebounce'
 import QuerySettings from '@/components/retrieval/QuerySettings'
 import { ChatMessage, MessageWithError } from '@/components/retrieval/ChatMessage'
 import { EraserIcon, SendIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { QueryMode } from '@/api/lightrag'
+import ConversationSidebar from '@/components/retrieval/ConversationSidebar'
 
 // Helper function to generate unique IDs with browser compatibility
 const generateUniqueId = () => {
@@ -66,6 +68,29 @@ export default function RetrievalTesting() {
   const isReceivingResponseRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+
+  const currentConversationId = useSettingsStore((s) => s.conversationId)
+
+  useEffect(() => {
+    const store = useSettingsStore.getState()
+    if (!store.conversationId || !(store.conversationId in store.conversations)) {
+      store.createConversation()
+    }
+  }, [])
+
+  useEffect(() => {
+    const history = useSettingsStore.getState().retrievalHistory || []
+    setMessages(
+      history.map((msg, index) => {
+        const msgWithError = msg as MessageWithError
+        return {
+          ...msg,
+          id: msgWithError.id || `hist-${Date.now()}-${index}`,
+          mermaidRendered: msgWithError.mermaidRendered ?? true,
+        }
+      })
+    )
+  }, [currentConversationId])
 
   // Scroll to bottom function - restored smooth scrolling with better handling
   const scrollToBottom = useCallback(() => {
@@ -198,6 +223,7 @@ export default function RetrievalTesting() {
 
       // Prepare query parameters
       const state = useSettingsStore.getState()
+      const auth = useAuthStore.getState()
       const queryParams = {
         ...state.querySettings,
         query: actualQuery,
@@ -205,6 +231,9 @@ export default function RetrievalTesting() {
           .filter((m) => m.isError !== true)
           .slice(-(state.querySettings.history_turns || 0) * 2)
           .map((m) => ({ role: m.role, content: m.content })),
+        conversation_id: state.conversationId,
+        user_profile: state.userProfile,
+        user_id: auth.username || undefined,
         ...(modeOverride ? { mode: modeOverride } : {})
       }
 
@@ -326,6 +355,7 @@ export default function RetrievalTesting() {
 
   return (
     <div className="flex size-full gap-2 px-2 pb-12 overflow-hidden">
+      <ConversationSidebar />
       <div className="flex grow flex-col gap-4">
         <div className="relative grow">
           <div

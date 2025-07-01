@@ -15,7 +15,7 @@ if not pm.is_installed("pymilvus"):
     pm.install("pymilvus")
 
 import configparser
-from pymilvus import MilvusClient  # type: ignore
+from pymilvus import MilvusClient, db  # type: ignore
 
 config = configparser.ConfigParser()
 config.read("config.ini", "utf-8")
@@ -43,6 +43,9 @@ class MilvusVectorDBStorage(BaseVectorStorage):
             )
         self.cosine_better_than_threshold = cosine_threshold
 
+        db_name = os.environ.get(
+            "MILVUS_DB_NAME", config.get("milvus", "db_name", fallback=None)
+        )
         self._client = MilvusClient(
             uri=os.environ.get(
                 "MILVUS_URI",
@@ -63,10 +66,22 @@ class MilvusVectorDBStorage(BaseVectorStorage):
             token=os.environ.get(
                 "MILVUS_TOKEN", config.get("milvus", "token", fallback=None)
             ),
-            db_name=os.environ.get(
-                "MILVUS_DB_NAME", config.get("milvus", "db_name", fallback=None)
-            ),
+            db_name=db_name,
         )
+
+        if db_name:
+            alias = self._client._using
+            try:
+                databases = db.list_database(using=alias)
+            except Exception as e:
+                logger.error(f"Unable to list databases: {e}")
+                databases = []
+            if db_name not in databases:
+                try:
+                    db.create_database(db_name, using=alias)
+                except Exception as e:
+                    logger.error(f"Unable to create database {db_name}: {e}")
+            self._client.using_database(db_name)
         self._max_batch_size = self.global_config["embedding_batch_num"]
         MilvusVectorDBStorage.create_collection_if_not_exist(
             self._client,

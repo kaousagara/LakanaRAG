@@ -4,6 +4,11 @@ import { createSelectors } from '@/lib/utils'
 import { defaultQueryLabel } from '@/lib/constants'
 import { Message, QueryRequest } from '@/api/lightrag'
 
+const generateConversationId = (): string =>
+  `conv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+const initialConversationId = generateConversationId()
+
 type Theme = 'dark' | 'light' | 'system'
 type Language = 'en' | 'zh' | 'fr' | 'ar' | 'zh_TW'
 type Tab = 'documents' | 'knowledge-graph' | 'retrieval' | 'api' | 'accounts'
@@ -48,8 +53,18 @@ interface SettingsState {
   retrievalHistory: Message[]
   setRetrievalHistory: (history: Message[]) => void
 
-  querySettings: Omit<QueryRequest, 'query'>
+  conversations: Record<string, Message[]>
+  createConversation: () => string
+  deleteConversation: (id: string) => void
+
+  querySettings: Omit<QueryRequest, 'query' | 'conversation_history' | 'user_profile' | 'conversation_id' | 'user_id'>
   updateQuerySettings: (settings: Partial<QueryRequest>) => void
+
+  conversationId: string
+  setConversationId: (id: string) => void
+
+  userProfile: Record<string, any>
+  updateUserProfile: (profile: Record<string, any>) => void
 
   // Auth settings
   apiKey: string | null
@@ -103,6 +118,10 @@ const useSettingsStoreBase = create<SettingsState>()(
 
       retrievalHistory: [],
 
+      conversationId: initialConversationId,
+      conversations: { [initialConversationId]: [] },
+      userProfile: {},
+
       querySettings: {
         mode: 'global',
         response_type: 'Multiple Paragraphs',
@@ -155,12 +174,62 @@ const useSettingsStoreBase = create<SettingsState>()(
 
       setCurrentTab: (tab: Tab) => set({ currentTab: tab }),
 
-      setRetrievalHistory: (history: Message[]) => set({ retrievalHistory: history }),
+      setRetrievalHistory: (history: Message[]) =>
+        set((state) => ({
+          retrievalHistory: history,
+          conversations: {
+            ...state.conversations,
+            [state.conversationId]: history,
+          },
+        })),
 
       updateQuerySettings: (settings: Partial<QueryRequest>) =>
         set((state) => ({
           querySettings: { ...state.querySettings, ...settings }
         })),
+
+      setConversationId: (id: string) =>
+        set((state) => ({
+          conversationId: id,
+          retrievalHistory: state.conversations[id] || [],
+        })),
+
+      createConversation: () => {
+        const id = generateConversationId()
+        set((state) => ({
+          conversationId: id,
+          retrievalHistory: [],
+          conversations: { ...state.conversations, [id]: [] },
+        }))
+        return id
+      },
+
+      deleteConversation: (id: string) =>
+        set((state) => {
+          const convs = { ...state.conversations }
+          delete convs[id]
+          let newId = state.conversationId
+          let history = state.retrievalHistory
+          if (state.conversationId === id) {
+            const ids = Object.keys(convs)
+            if (ids.length > 0) {
+              newId = ids[0]
+              history = convs[newId]
+            } else {
+              newId = generateConversationId()
+              convs[newId] = []
+              history = []
+            }
+          }
+          return {
+            conversations: convs,
+            conversationId: newId,
+            retrievalHistory: history,
+          }
+        }),
+
+      updateUserProfile: (profile: Record<string, any>) =>
+        set((state) => ({ userProfile: { ...state.userProfile, ...profile } })),
 
       setShowFileName: (show: boolean) => set({ showFileName: show }),
       setShowLegend: (show: boolean) => set({ showLegend: show })
@@ -168,7 +237,7 @@ const useSettingsStoreBase = create<SettingsState>()(
     {
       name: 'settings-storage',
       storage: createJSONStorage(() => localStorage),
-      version: 13,
+      version: 15,
       migrate: (state: any, version: number) => {
         if (version < 2) {
           state.showEdgeLabel = false
@@ -231,6 +300,14 @@ const useSettingsStoreBase = create<SettingsState>()(
           if (state.querySettings) {
             state.querySettings.user_prompt = ''
           }
+        }
+        if (version < 14) {
+          state.conversationId = generateConversationId()
+          state.userProfile = {}
+        }
+        if (version < 15) {
+          const convId = state.conversationId || generateConversationId()
+          state.conversations = { [convId]: state.retrievalHistory || [] }
         }
         return state
       }

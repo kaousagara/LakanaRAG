@@ -37,6 +37,7 @@ from .base import (
 )
 from .prompt import GRAPH_FIELD_SEP, PROMPTS
 from .constants import DEFAULT_ENTITY_LINK_BASE_URL, MAX_VECTOR_CONTENT_LENGTH
+from .user_profile import personalize_query
 import time
 from dotenv import load_dotenv
 
@@ -1468,6 +1469,9 @@ async def kg_query(
     system_prompt: str | None = None,
     chunks_vdb: BaseVectorStorage = None,
 ) -> str | AsyncIterator[str]:
+    if query_param.user_profile:
+        query = personalize_query(query, query_param.user_profile)
+
     if query_param.model_func:
         use_model_func = query_param.model_func
     else:
@@ -1550,6 +1554,7 @@ async def kg_query(
         response_type=query_param.response_type,
         history=history_context,
         user_prompt=user_prompt,
+        user_profile=json.dumps(query_param.user_profile, ensure_ascii=False),
     )
 
     if query_param.only_need_prompt:
@@ -2790,6 +2795,7 @@ async def naive_query(
         response_type=query_param.response_type,
         history=history_context,
         user_prompt=user_prompt,
+        user_profile=json.dumps(query_param.user_profile, ensure_ascii=False),
     )
 
     if query_param.only_need_prompt:
@@ -2917,6 +2923,7 @@ async def kg_query_with_keywords(
         context_data=context,
         response_type=query_param.response_type,
         history=history_context,
+        user_profile=json.dumps(query_param.user_profile, ensure_ascii=False),
     )
 
     if query_param.only_need_prompt:

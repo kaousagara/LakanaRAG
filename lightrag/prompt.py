@@ -377,6 +377,9 @@ Générez une réponse claire et rigoureuse à la requête utilisateur en appliq
 - des consignes de réponse
 N'introduisez **aucune information extérieure non justifiée par la base de connaissances fournie**.
 
+---Profil utilisateur---
+{user_profile}
+
 ---Méthode de Raisonnement Tree of Thought (ToT)---
 
 Pour générer la réponse finale, appliquez les étapes suivantes :
@@ -407,6 +410,11 @@ Pour générer la réponse finale, appliquez les étapes suivantes :
    - *Thought*: Quelles sources justifient le contenu de la réponse ?
    - *Rationale*: Priorisez les documents ou relations les plus directement liés à chaque information affirmée.
    - *Conclusion*: Listez jusqu’à 5 références avec format clair : [KG/DC] file_path
+
+6. **Feedback sur les branches ToT**
+   - *Thought*: Quelles branches alternatives ont été explorées ?
+   - *Rationale*: Expliquez brièvement la logique de chaque branche.
+   - *Conclusion*: Résumez chaque branche et invitez l’utilisateur à évaluer sa pertinence.
 
 ---Données disponibles---
 **Historique de conversation**
@@ -542,7 +550,12 @@ En vous appuyant exclusivement sur les Document Chunks fournis, appliquez un **r
 - Synthétiser les informations de façon claire et structurée
 - Produire une réponse complète sans extrapolation
 
+Produire une réponse complète sans extrapolation
+
 N’introduisez **aucune information extérieure**. Tous les éléments utilisés doivent provenir explicitement des Document Chunks.
+
+---Profil utilisateur---
+{user_profile}
 
 ---Méthode de Raisonnement Tree of Thought (ToT)---
 

@@ -113,6 +113,12 @@ export type QueryRequest = {
   history_turns?: number
   /** User-provided prompt for the query. If provided, this will be used instead of the default value from prompt template. */
   user_prompt?: string
+  /** Additional information about the user issuing the query. */
+  user_profile?: Record<string, any>
+  /** Identifier of the user profile. */
+  user_id?: string
+  /** Identifier of the conversation for storing history. */
+  conversation_id?: string
 }
 
 export type QueryResponse = {
