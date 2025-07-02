@@ -38,7 +38,7 @@ from .base import (
 )
 from .prompt import GRAPH_FIELD_SEP, PROMPTS
 from .constants import DEFAULT_ENTITY_LINK_BASE_URL, MAX_VECTOR_CONTENT_LENGTH
-from .user_profile import personalize_query
+from .user_profile import personalize_query, profile_to_prompt
 import time
 from dotenv import load_dotenv
 
@@ -1579,12 +1579,13 @@ async def kg_query(
         else PROMPTS["DEFAULT_USER_PROMPT"]
     )
     sys_prompt_temp = system_prompt if system_prompt else PROMPTS["rag_response"]
+    profile_str = profile_to_prompt(query_param.user_profile or {})
     sys_prompt = sys_prompt_temp.format(
         context_data=context,
         response_type=query_param.response_type,
         history=history_context,
         user_prompt=user_prompt,
-        user_profile=json.dumps(query_param.user_profile, ensure_ascii=False),
+        user_profile=profile_str,
     )
 
     if query_param.only_need_prompt:
@@ -2820,12 +2821,13 @@ async def naive_query(
         else PROMPTS["DEFAULT_USER_PROMPT"]
     )
     sys_prompt_temp = system_prompt if system_prompt else PROMPTS["naive_rag_response"]
+    profile_str = profile_to_prompt(query_param.user_profile or {})
     sys_prompt = sys_prompt_temp.format(
         content_data=text_units_str,
         response_type=query_param.response_type,
         history=history_context,
         user_prompt=user_prompt,
-        user_profile=json.dumps(query_param.user_profile, ensure_ascii=False),
+        user_profile=profile_str,
     )
 
     if query_param.only_need_prompt:
@@ -2949,11 +2951,12 @@ async def kg_query_with_keywords(
         )
 
     sys_prompt_temp = PROMPTS["rag_response"]
+    profile_str = profile_to_prompt(query_param.user_profile or {})
     sys_prompt = sys_prompt_temp.format(
         context_data=context,
         response_type=query_param.response_type,
         history=history_context,
-        user_profile=json.dumps(query_param.user_profile, ensure_ascii=False),
+        user_profile=profile_str,
     )
 
     if query_param.only_need_prompt:

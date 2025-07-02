@@ -16,6 +16,7 @@ from lightrag.user_profile import (
     analyze_behavior,
     revert_user_profile,
     load_user_profile,
+    update_user_profile,
     get_conversation_history,
 )
 from ..utils_api import get_combined_auth_dependency
@@ -160,6 +161,11 @@ class TagEntitiesRequest(BaseModel):
     entities: List[str] = Field(..., description="Entities to tag as corrected")
 
 
+class UserProfileUpdateRequest(BaseModel):
+    user_id: str = Field(..., description="Identifier of the user")
+    profile: Dict[str, Any] = Field(..., description="Profile fields to update")
+
+
 class QueryResponse(BaseModel):
     response: str = Field(
         description="The generated response",
@@ -259,6 +265,24 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
         """Revert the user profile to a previous version."""
         try:
             return revert_user_profile(user_id, version)
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.get("/profile/{user_id}", dependencies=[Depends(combined_auth)])
+    async def get_profile(user_id: str):
+        """Return the stored profile for a user."""
+        try:
+            return load_user_profile(user_id)
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/profile/{user_id}", dependencies=[Depends(combined_auth)])
+    async def update_profile(user_id: str, request: UserProfileUpdateRequest):
+        """Update or create a user profile."""
+        try:
+            return update_user_profile(user_id, request.profile)
         except Exception as e:
             trace_exception(e)
             raise HTTPException(status_code=500, detail=str(e))

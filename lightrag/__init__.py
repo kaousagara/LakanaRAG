@@ -12,6 +12,7 @@ from .user_profile import (
     record_branch_feedback,
     auto_tag_entities,
     analyze_behavior,
+    profile_to_prompt,
 )
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "record_branch_feedback",
     "auto_tag_entities",
     "analyze_behavior",
+    "profile_to_prompt",
 ]
 
 __version__ = "1.3.8"

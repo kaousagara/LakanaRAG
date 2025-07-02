@@ -613,6 +613,21 @@ When using the Python API, provide `user_id` and `conversation_id` in `QueryPara
 
 For the REST API, include these identifiers in your `/query` or `/query/stream` requests to enable automatic history tracking. Retrieve a stored history later using `GET /profile/{user_id}/conversations/{conversation_id}`.
 
+### User Experience Learning
+
+LightRAG can adapt its responses based on stored user profiles. A profile records preferences like language, format and business context. You can update or fetch the profile via the REST API:
+
+```bash
+# Update or create a profile
+POST /profile/{user_id}
+{"profile": {"preferences": {"lang": "fr", "format": "markdown"}, "context": {"organization": "ANSE"}}}
+
+# Retrieve the profile
+GET /profile/{user_id}
+```
+
+When a profile is supplied in `QueryParam`, the system converts it into natural language and inserts it into the system prompt so future queries automatically respect the user's preferred language and style.
+
 ### User Prompt vs. Query
 
 When using LightRAG for content queries, avoid combining the search process with unrelated output processing, as this significantly impacts query effectiveness. The `user_prompt` parameter in Query Param is specifically designed to address this issue — it does not participate in the RAG retrieval phase, but rather guides the LLM on how to process the retrieved results after the query is completed. Here's how to use it:
