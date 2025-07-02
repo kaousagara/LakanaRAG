@@ -611,6 +611,8 @@ assistant: "Il a été reélu le 24 avril 2022"
 
 When using the Python API, provide `user_id` and `conversation_id` in `QueryParam` and the history will be automatically persisted between calls.
 
+For the REST API, include these identifiers in your `/query` or `/query/stream` requests to enable automatic history tracking. Retrieve a stored history later using `GET /profile/{user_id}/conversations/{conversation_id}`.
+
 ### User Prompt vs. Query
 
 When using LightRAG for content queries, avoid combining the search process with unrelated output processing, as this significantly impacts query effectiveness. The `user_prompt` parameter in Query Param is specifically designed to address this issue — it does not participate in the RAG retrieval phase, but rather guides the LLM on how to process the retrieved results after the query is completed. Here's how to use it:
