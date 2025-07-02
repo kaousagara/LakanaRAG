@@ -17,6 +17,7 @@ from .utils import (
     is_float_regex,
     normalize_extracted_info,
     standardize_entity_name,
+    canonicalize_entity_name,
     pack_user_ass_to_openai_messages,
     split_string_by_multi_markers,
     truncate_list_by_token_size,
@@ -437,7 +438,17 @@ async def _merge_nodes_then_upsert(
     llm_response_cache: BaseKVStorage | None = None,
 ):
     """Get existing nodes from knowledge graph use name,if exists, merge data, else create, then upsert."""
-    entity_name = standardize_entity_name(entity_name)
+    # Choose the most representative entity name among nodes_data and existing data
+    name_candidates = [dp.get("entity_name") for dp in nodes_data if dp.get("entity_name")]
+    already_node = await knowledge_graph_inst.get_node(entity_name)
+    if already_node and already_node.get("entity_id"):
+        name_candidates.append(already_node.get("entity_id"))
+
+    if name_candidates:
+        entity_name = standardize_entity_name(Counter(name_candidates).most_common(1)[0][0])
+    else:
+        entity_name = standardize_entity_name(entity_name)
+
     already_entity_types = []
     already_source_ids = []
     already_description = []
@@ -445,7 +456,6 @@ async def _merge_nodes_then_upsert(
     already_additional_properties = []
     already_entity_communities = []
 
-    already_node = await knowledge_graph_inst.get_node(entity_name)
     if already_node:
         entity_type_value = already_node.get("entity_type")
         if entity_type_value is not None:
@@ -969,6 +979,7 @@ async def merge_nodes_and_edges(
     relationships_data = []
     associations_nodes = []
     multi_hop_nodes = []
+    canonical_to_final = {}
 
     # Merge nodes and edges
     # Use graph database lock to ensure atomic merges and updates
@@ -995,12 +1006,18 @@ async def merge_nodes_and_edges(
             )
             if entity_data is not None:
                 entities_data.append(entity_data)
+                canonical_to_final[entity_name] = entity_data["entity_name"]
 
         # Process and update all relationships at once
         for edge_key, edges in all_edges.items():
+            src_final = canonical_to_final.get(edge_key[0], edge_key[0])
+            tgt_final = canonical_to_final.get(edge_key[1], edge_key[1])
+            for e in edges:
+                e["src_id"] = src_final
+                e["tgt_id"] = tgt_final
             edge_data = await _merge_edges_then_upsert(
-                edge_key[0],
-                edge_key[1],
+                src_final,
+                tgt_final,
                 edges,
                 knowledge_graph_inst,
                 global_config,
@@ -1013,6 +1030,9 @@ async def merge_nodes_and_edges(
 
         if global_config.get("enable_association", True):
             for assoc in all_assocs:
+                assoc["entities"] = [
+                    canonical_to_final.get(e, e) for e in assoc["entities"]
+                ]
                 assoc_node = await _merge_association_then_upsert(
                     assoc,
                     knowledge_graph_inst,
@@ -1027,6 +1047,9 @@ async def merge_nodes_and_edges(
         multi_hop_edges_from_paths = []
         if global_config.get("enable_multi_hop", True):
             for mh in all_multi_hops:
+                mh["path_entities"] = [
+                    canonical_to_final.get(e, e) for e in mh["path_entities"]
+                ]
                 mh_node, mh_edges = await _merge_multi_hop_then_upsert(
                     mh,
                     knowledge_graph_inst,
@@ -1280,16 +1303,17 @@ async def extract_entities(
                 record_attributes, chunk_key, file_path
             )
             if if_entities is not None:
-                maybe_nodes[if_entities["entity_name"]].append(if_entities)
+                can_name = canonicalize_entity_name(if_entities["entity_name"])
+                maybe_nodes[can_name].append(if_entities)
                 continue
 
             if_relation = await _handle_single_relationship_extraction(
                 record_attributes, chunk_key, file_path
             )
             if if_relation is not None:
-                maybe_edges[(if_relation["src_id"], if_relation["tgt_id"])].append(
-                    if_relation
-                )
+                src_can = canonicalize_entity_name(if_relation["src_id"])
+                tgt_can = canonicalize_entity_name(if_relation["tgt_id"])
+                maybe_edges[(src_can, tgt_can)].append(if_relation)
                 continue
 
             if global_config.get("enable_latent_relation", True):
@@ -1307,6 +1331,9 @@ async def extract_entities(
                     record_attributes, chunk_key, file_path
                 )
                 if if_multi is not None:
+                    if_multi["path_entities"] = [
+                        canonicalize_entity_name(e) for e in if_multi["path_entities"]
+                    ]
                     maybe_multi_hops.append(if_multi)
                     continue
 
@@ -1315,6 +1342,9 @@ async def extract_entities(
                     record_attributes, chunk_key, file_path
                 )
                 if if_assoc is not None:
+                    if_assoc["entities"] = [
+                        canonicalize_entity_name(e) for e in if_assoc["entities"]
+                    ]
                     maybe_assocs.append(if_assoc)
 
         return maybe_nodes, maybe_edges, maybe_assocs, maybe_multi_hops
