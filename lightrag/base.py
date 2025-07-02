@@ -137,6 +137,9 @@ class QueryParam:
     categories: list[str] = field(default_factory=list)
     """Filter results to only these semantic categories if provided."""
 
+    original_query: str | None = None
+    """The original user question, preserved for hierarchical retrieval."""
+
 
 @dataclass
 class StorageNameSpace(ABC):
