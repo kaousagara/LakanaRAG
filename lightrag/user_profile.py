@@ -68,6 +68,24 @@ def personalize_query(raw_query: str, user_profile: Dict[str, Any]) -> str:
     return raw_query
 
 
+def profile_to_prompt(user_profile: Dict[str, Any]) -> str:
+    """Convert a user profile into a natural language prompt snippet."""
+    parts: list[str] = []
+    prefs = user_profile.get("preferences", {})
+    if (lang := prefs.get("lang")):
+        parts.append(f"Réponds en {lang}.")
+    if (fmt := prefs.get("format")):
+        parts.append(f"Utilise le format {fmt}.")
+    if (detail := prefs.get("detail_level")):
+        parts.append(f"Niveau de détail : {detail}.")
+    context = user_profile.get("context", {})
+    if (org := context.get("organization")):
+        parts.append(f"Organisation : {org}.")
+    if (mission := context.get("mission")):
+        parts.append(f"Mission : {mission}.")
+    return " ".join(parts)
+
+
 def record_feedback(
     user_id: str,
     query: str,

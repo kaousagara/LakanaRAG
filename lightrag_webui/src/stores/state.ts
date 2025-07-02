@@ -157,7 +157,7 @@ const initAuthState = (): { isAuthenticated: boolean; isGuestMode: boolean; isAd
   };
 };
 
-export const useAuthStore = create<AuthState>(set => {
+const useAuthStoreBase = create<AuthState>(set => {
   // Get initial state from localStorage
   const initialState = initAuthState();
 
@@ -264,3 +264,7 @@ export const useAuthStore = create<AuthState>(set => {
     }
   };
 });
+
+const useAuthStore = createSelectors(useAuthStoreBase)
+
+export { useAuthStore }

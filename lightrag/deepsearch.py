@@ -4,6 +4,7 @@ import json
 import os
 import re
 import time
+import textwrap
 from typing import List, Tuple
 
 import pipmaster as pm  # type: ignore
@@ -72,8 +73,17 @@ def _create_pdf(content: str, working_dir: str) -> str:
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_font("Helvetica", size=12)
+
+    # Very long words without spaces can cause FPDF to raise
+    # `Not enough horizontal space to render a single character`.
+    # We pre-wrap lines to avoid this situation.
     for line in content.split("\n"):
-        pdf.multi_cell(0, 10, line)
+        wrapped = textwrap.wrap(
+            line, width=100, break_long_words=True, break_on_hyphens=False
+        )
+        for chunk in wrapped or [""]:
+            pdf.multi_cell(0, 10, chunk)
+
     report_dir = os.path.join(working_dir, "reports")
     os.makedirs(report_dir, exist_ok=True)
     file_path = os.path.join(report_dir, f"deepsearch_{int(time.time())}.pdf")
