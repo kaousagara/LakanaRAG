@@ -32,6 +32,10 @@ from .config import (
 )
 from lightrag.utils import get_env_value
 import sys
+
+# Allow running this file directly without the package context
+if __name__ == "__main__" and __package__ is None:
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
 from lightrag import LightRAG, __version__ as core_version
 from lightrag.api import __api_version__
 from lightrag.types import GPTKeywordExtractionFormat
