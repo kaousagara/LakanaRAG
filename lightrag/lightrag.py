@@ -76,6 +76,12 @@ from .utils import (
     check_storage_env_vars,
     logger,
 )
+from .user_profile import (
+    load_user_profile,
+    update_user_profile,
+    append_conversation_history,
+    get_conversation_history,
+)
 from .types import KnowledgeGraph
 from dotenv import load_dotenv
 
@@ -1512,6 +1518,18 @@ class LightRAG:
         # Save original query for vector search
         param.original_query = query
 
+        if param.user_id:
+            if param.user_profile:
+                param.user_profile = update_user_profile(
+                    param.user_id, param.user_profile
+                )
+            else:
+                param.user_profile = load_user_profile(param.user_id)
+            if not param.conversation_history and param.conversation_id:
+                param.conversation_history = get_conversation_history(
+                    param.user_id, param.conversation_id
+                )
+
         if param.mode in ["local", "global", "hybrid", "mix"]:
             response = await kg_query(
                 query.strip(),
@@ -1567,6 +1585,35 @@ class LightRAG:
         else:
             raise ValueError(f"Unknown mode {param.mode}")
         await self._query_done()
+        if param.user_id and param.conversation_id:
+            if isinstance(response, str):
+                resp_text = response
+                append_conversation_history(
+                    param.user_id,
+                    param.conversation_id,
+                    [
+                        {"role": "user", "content": query},
+                        {"role": "assistant", "content": resp_text},
+                    ],
+                )
+            else:
+                original_response = response
+
+                async def _wrap_stream():
+                    collected = []
+                    async for chunk in original_response:
+                        collected.append(str(chunk))
+                        yield chunk
+                    append_conversation_history(
+                        param.user_id,
+                        param.conversation_id,
+                        [
+                            {"role": "user", "content": query},
+                            {"role": "assistant", "content": "".join(collected)},
+                        ],
+                    )
+
+                response = _wrap_stream()
         return response
 
     # TODO: Deprecated, use user_prompt in QueryParam instead
