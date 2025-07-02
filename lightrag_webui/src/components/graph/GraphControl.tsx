@@ -54,17 +54,14 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
       try {
         if (typeof sigma.setGraph === 'function') {
           sigma.setGraph(sigmaGraph as unknown as AbstractGraph<NodeType, EdgeType>);
-          console.log('Binding graph to sigma instance');
         } else {
           (sigma as any).graph = sigmaGraph;
-          console.warn('Simgma missing setGraph function, set graph property directly');
         }
       } catch (error) {
         console.error('Error setting graph on sigma instance:', error);
       }
 
       assignLayout();
-      console.log('Initial layout applied to graph');
     }
   }, [sigma, sigmaGraph, assignLayout, maxIterations])
 
@@ -77,7 +74,6 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
       // Double-check that the store has the sigma instance
       const currentInstance = useGraphStore.getState().sigmaInstance;
       if (!currentInstance) {
-        console.log('Setting sigma instance from GraphControl');
         useGraphStore.getState().setSigmaInstance(sigma);
       }
     }
