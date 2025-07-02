@@ -128,6 +128,9 @@ class QueryParam:
     conversation_id: str | None = None
     """Identifier of the current conversation for storing history."""
 
+    original_query: str | None = None
+    """Cache the original query text for advanced retrieval pipelines."""
+
 
 @dataclass
 class StorageNameSpace(ABC):
