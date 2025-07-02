@@ -78,8 +78,15 @@ def _create_pdf(content: str, working_dir: str) -> str:
     # `Not enough horizontal space to render a single character`.
     # We pre-wrap lines to avoid this situation.
     for line in content.split("\n"):
+        # FPDF calculates layout in physical units. For a font size of 12 on an
+        # A4 page with default margins, about 70 characters fit comfortably on a
+        # line. We break long words proactively at this length to avoid
+        # ``Not enough horizontal space to render a single character`` errors.
         wrapped = textwrap.wrap(
-            line, width=100, break_long_words=True, break_on_hyphens=False
+            line,
+            width=70,
+            break_long_words=True,
+            break_on_hyphens=False,
         )
         for chunk in wrapped or [""]:
             pdf.multi_cell(0, 10, chunk)
