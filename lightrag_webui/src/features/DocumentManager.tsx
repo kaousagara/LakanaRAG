@@ -162,7 +162,7 @@ export default function DocumentManager() {
   const { t, i18n } = useTranslation()
   const health = useBackendState.use.health()
   const pipelineBusy = useBackendState.use.pipelineBusy()
-  const isAdmin = useAuthStore.use.isAdmin()
+  const { isAdmin } = useAuthStore()
   const [docs, setDocs] = useState<DocsStatusesResponse | null>(null)
   const currentTab = useSettingsStore.use.currentTab()
   const showFileName = useSettingsStore.use.showFileName()
