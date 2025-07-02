@@ -1544,6 +1544,7 @@ class LightRAG:
                 chunks_vdb=self.chunks_vdb,
             )
         elif param.mode == "analyste":
+            param.mode = "mix"
             response = await kg_query(
                 query.strip(),
                 self.chunk_entity_relation_graph,
@@ -1557,6 +1558,7 @@ class LightRAG:
                 chunks_vdb=self.chunks_vdb,
             )
         elif param.mode == "deepsearch":
+            param.mode = "mix"
             from .deepsearch import deepsearch_query
 
             response = await deepsearch_query(query.strip(), self, param)
