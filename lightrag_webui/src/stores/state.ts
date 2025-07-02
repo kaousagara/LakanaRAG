@@ -96,7 +96,11 @@ const useBackendState = createSelectors(useBackendStateStoreBase)
 
 export { useBackendState }
 
-const parseTokenPayload = (token: string): { sub?: string; role?: string } => {
+const parseTokenPayload = (token: string): {
+  sub?: string
+  role?: string
+  exp?: number
+} => {
   try {
     // JWT tokens are in the format: header.payload.signature
     const parts = token.split('.');
@@ -124,6 +128,18 @@ const isAdminToken = (token: string): boolean => {
   return payload.role === 'admin';
 };
 
+const isTokenExpired = (token: string): boolean => {
+  const payload = parseTokenPayload(token);
+  if (!payload.exp) return false;
+  try {
+    // exp is in seconds since epoch
+    const expMs = payload.exp * 1000;
+    return Date.now() >= expMs;
+  } catch {
+    return false;
+  }
+};
+
 const initAuthState = (): { isAuthenticated: boolean; isGuestMode: boolean; isAdmin: boolean; coreVersion: string | null; apiVersion: string | null; username: string | null; webuiTitle: string | null; webuiDescription: string | null } => {
   const token = localStorage.getItem('LIGHTRAG-API-TOKEN');
   const coreVersion = localStorage.getItem('LIGHTRAG-CORE-VERSION');
@@ -132,7 +148,10 @@ const initAuthState = (): { isAuthenticated: boolean; isGuestMode: boolean; isAd
   const webuiDescription = localStorage.getItem('LIGHTRAG-WEBUI-DESCRIPTION');
   const username = token ? getUsernameFromToken(token) : null;
 
-  if (!token) {
+  if (!token || isGuestToken(token) || isTokenExpired(token)) {
+    if (token && (isGuestToken(token) || isTokenExpired(token))) {
+      localStorage.removeItem('LIGHTRAG-API-TOKEN');
+    }
     return {
       isAuthenticated: false,
       isGuestMode: false,
@@ -157,7 +176,7 @@ const initAuthState = (): { isAuthenticated: boolean; isGuestMode: boolean; isAd
   };
 };
 
-export const useAuthStore = create<AuthState>(set => {
+const useAuthStoreBase = create<AuthState>(set => {
   // Get initial state from localStorage
   const initialState = initAuthState();
 
@@ -264,3 +283,7 @@ export const useAuthStore = create<AuthState>(set => {
     }
   };
 });
+
+const useAuthStore = createSelectors(useAuthStoreBase)
+
+export { useAuthStore }

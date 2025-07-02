@@ -14,6 +14,7 @@ if not pm.is_installed("fpdf2"):
 from fpdf import FPDF
 
 from .base import QueryParam
+from .prompt import PROMPTS
 
 
 async def _parse_json(text: str) -> list[str]:
@@ -63,7 +64,17 @@ async def _answer_question(question: str, rag, param: QueryParam) -> str:
     sub_param.mode = "hybrid"
     sub_param.stream = False
     ans = await rag.aquery(question, sub_param)
-    return ans if isinstance(ans, str) else str(ans)
+    text = ans if isinstance(ans, str) else str(ans)
+    tokenizer = rag.tokenizer
+    max_tok = param.max_token_for_text_unit
+    if len(tokenizer.encode(text)) > max_tok:
+        text = await rag.aquery(
+            text,
+            QueryParam(mode="bypass", stream=False),
+            system_prompt=PROMPTS["summarize_entity_descriptions"],
+        )
+        text = text if isinstance(text, str) else str(text)
+    return text
 
 
 def _create_pdf(content: str, working_dir: str) -> str:
@@ -109,5 +120,13 @@ async def deepsearch_query(query: str, rag, param: QueryParam) -> str:
                 queue.append((f, depth + 1))
 
     report_text = _format_report(query, qa_pairs)
+    tokenizer = rag.tokenizer
+    if len(tokenizer.encode(report_text)) > param.max_token_for_text_unit:
+        report_text = await rag.aquery(
+            report_text,
+            QueryParam(mode="bypass", stream=False),
+            system_prompt=PROMPTS["summarize_entity_descriptions"],
+        )
+        report_text = report_text if isinstance(report_text, str) else str(report_text)
     pdf_path = _create_pdf(report_text, rag.working_dir)
     return pdf_path
