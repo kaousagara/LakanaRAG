@@ -25,7 +25,7 @@ from lightrag.api.utils_api import (
     check_env_file,
 )
 from pydantic import BaseModel
-from .config import (
+from config import (
     global_args,
     update_uvicorn_mode_config,
     get_default_host,
