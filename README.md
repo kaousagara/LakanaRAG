@@ -600,6 +600,15 @@ response = rag.query(
 
 </details>
 
+Example conversation history:
+
+```
+user: "Qui est le president de la France?"
+assistant: "Emmanuel Macron est le president de la France"
+user: "Quand a-t-il été reélu?"
+assistant: "Il a été reélu le 24 avril 2022"
+```
+
 ### User Prompt vs. Query
 
 When using LightRAG for content queries, avoid combining the search process with unrelated output processing, as this significantly impacts query effectiveness. The `user_prompt` parameter in Query Param is specifically designed to address this issue — it does not participate in the RAG retrieval phase, but rather guides the LLM on how to process the retrieved results after the query is completed. Here's how to use it:
