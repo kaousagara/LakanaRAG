@@ -5,6 +5,7 @@ import re
 import time
 from typing import List, Tuple, Deque
 from collections import deque
+from dataclasses import asdict
 from docx import Document
 
 from .base import QueryParam
@@ -133,7 +134,7 @@ async def _select_thoughts(thoughts: List[str], context: str, rag, top_k: int) -
     return [thought for thought, _ in evaluations[:top_k]]
 
 async def _answer_question(question: str, rag, param: QueryParam) -> str:
-    sub_param = QueryParam(**param.dict)
+    sub_param = QueryParam(**asdict(param))
     sub_param.mode = "hybrid"
     sub_param.stream = False
     
