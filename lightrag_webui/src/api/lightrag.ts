@@ -67,7 +67,7 @@ export type LightragDocumentsScanProgress = {
  * - "mix": Integrates knowledge graph and vector retrieval.
  * - "bypass": Bypasses knowledge retrieval and directly uses the LLM.
  * - "analyste": Hybrid reasoning with an analyst committee prompt.
- * - "deepsearch": Tree-of-Thought search producing a PDF report.
+ * - "deepsearch": Tree-of-Thought search producing a DOCX report.
  */
 export type QueryMode =
   | 'naive'
@@ -681,5 +681,84 @@ export const updateAccount = async (username: string, data: { password?: string;
 
 export const deleteAccount = async (username: string): Promise<DocActionResponse> => {
   const response = await axiosInstance.delete(`/accounts/${encodeURIComponent(username)}`)
+  return response.data
+}
+
+export const createEntity = async (
+  entityName: string,
+  entityData: Record<string, any>
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.post('/graph/entity/create', {
+    entity_name: entityName,
+    entity_data: entityData
+  })
+  return response.data
+}
+
+export const createRelation = async (
+  source: string,
+  target: string,
+  relationData: Record<string, any>
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.post('/graph/relation/create', {
+    source_entity: source,
+    target_entity: target,
+    relation_data: relationData
+  })
+  return response.data
+}
+
+export const mergeEntities = async (
+  sources: string[],
+  target: string,
+  mergeStrategy?: Record<string, string>
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.post('/graph/entities/merge', {
+    source_entities: sources,
+    target_entity: target,
+    merge_strategy: mergeStrategy
+  })
+  return response.data
+}
+
+export const deleteEntity = async (entityName: string): Promise<DocActionResponse> => {
+  const response = await axiosInstance.delete(`/graph/entity/${encodeURIComponent(entityName)}`)
+  return response.data
+}
+
+export const deleteRelation = async (
+  source: string,
+  target: string
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.delete(
+    `/graph/relation?source_entity=${encodeURIComponent(source)}&target_entity=${encodeURIComponent(target)}`
+  )
+  return response.data
+}
+
+export type BehaviorAnalysis = {
+  top_words: [string, number][]
+  negative_feedback: number
+  positive_feedback: number
+  total_queries: number
+  average_query_length: number
+  top_queries: [string, number][]
+}
+
+export const getBehaviorAnalysis = async (
+  username: string
+): Promise<BehaviorAnalysis> => {
+  const response = await axiosInstance.get(
+    `/profile/${encodeURIComponent(username)}/analysis`
+  )
+  return response.data
+}
+
+export const resetUserProfile = async (
+  username: string
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.delete(
+    `/profile/${encodeURIComponent(username)}`
+  )
   return response.data
 }

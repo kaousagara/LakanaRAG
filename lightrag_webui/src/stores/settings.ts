@@ -11,7 +11,7 @@ const initialConversationId = generateConversationId()
 
 type Theme = 'dark' | 'light' | 'system'
 type Language = 'en' | 'zh' | 'fr' | 'ar' | 'zh_TW'
-type Tab = 'documents' | 'knowledge-graph' | 'retrieval' | 'api' | 'accounts'
+type Tab = 'documents' | 'knowledge-graph' | 'retrieval' | 'api' | 'analysis' | 'accounts'
 
 interface SettingsState {
   // Document manager settings

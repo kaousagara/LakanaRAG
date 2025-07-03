@@ -40,3 +40,17 @@ def test_profile_version_and_tags(monkeypatch):
         analysis = analyze_behavior(user_id)
         assert analysis["negative_feedback"] >= 0
         assert analysis["top_queries"][0][0] == "hello world"
+        assert analysis["total_queries"] == 2
+        assert analysis["positive_feedback"] >= 0
+
+
+def test_reset_profile(monkeypatch):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        monkeypatch.setenv("USER_PROFILE_DIR", tmpdir)
+        user_id = "u1"
+        save_user_profile(user_id, {"preferences": {"lang": "en"}})
+        assert load_user_profile(user_id)
+        from lightrag.user_profile import reset_user_profile
+
+        reset_user_profile(user_id)
+        assert load_user_profile(user_id) == {}
