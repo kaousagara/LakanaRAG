@@ -9,10 +9,13 @@ from typing import List, Tuple
 
 import pipmaster as pm  # type: ignore
 
-if not pm.is_installed("fpdf2"):
-    pm.install("fpdf2")
+if not pm.is_installed("python-docx"):
+    try:
+        pm.install("python-docx")
+    except Exception:
+        pm.install("docx")
 
-from fpdf import FPDF
+from docx import Document  # type: ignore
 
 from .base import QueryParam
 
@@ -67,30 +70,17 @@ async def _answer_question(question: str, rag, param: QueryParam) -> str:
     return ans if isinstance(ans, str) else str(ans)
 
 
-def _create_pdf(content: str, working_dir: str) -> str:
-    """Generate a PDF file from the given text content."""
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_font("Helvetica", size=12)
+def _create_docx(content: str, working_dir: str) -> str:
+    """Generate a DOCX file from the given text content."""
+    doc = Document()
 
-    # Very long words without spaces can cause FPDF to raise
-    # ``Not enough horizontal space to render a single character``. We
-    # pre-wrap lines and join them back with explicit newlines so that each
-    # paragraph is rendered in a single ``multi_cell`` call.
     for line in content.split("\n"):
-        wrapped = textwrap.wrap(
-            line,
-            width=50,
-            break_long_words=True,
-            break_on_hyphens=False,
-        )
-        pdf.multi_cell(0, 10, "\n".join(wrapped or [""]))
+        doc.add_paragraph(line)
 
     report_dir = os.path.join(working_dir, "reports")
     os.makedirs(report_dir, exist_ok=True)
-    file_path = os.path.join(report_dir, f"deepsearch_{int(time.time())}.pdf")
-    pdf.output(file_path)
+    file_path = os.path.join(report_dir, f"deepsearch_{int(time.time())}.docx")
+    doc.save(file_path)
     return file_path
 
 
@@ -105,7 +95,7 @@ def _format_report(query: str, qa_pairs: List[Tuple[str, str]]) -> str:
 
 
 async def deepsearch_query(query: str, rag, param: QueryParam) -> str:
-    """Run a Tree-of-Thought deep search and return a PDF report path."""
+    """Run a Tree-of-Thought deep search and return a DOCX report path."""
     subqueries = await _generate_subqueries(query, rag)
 
     queue: List[Tuple[str, int]] = [(q, 1) for q in subqueries]
@@ -122,5 +112,5 @@ async def deepsearch_query(query: str, rag, param: QueryParam) -> str:
                 queue.append((f, depth + 1))
 
     report_text = _format_report(query, qa_pairs)
-    pdf_path = _create_pdf(report_text, rag.working_dir)
-    return pdf_path
+    docx_path = _create_docx(report_text, rag.working_dir)
+    return docx_path

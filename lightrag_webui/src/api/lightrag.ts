@@ -67,7 +67,7 @@ export type LightragDocumentsScanProgress = {
  * - "mix": Integrates knowledge graph and vector retrieval.
  * - "bypass": Bypasses knowledge retrieval and directly uses the LLM.
  * - "analyste": Hybrid reasoning with an analyst committee prompt.
- * - "deepsearch": Tree-of-Thought search producing a PDF report.
+ * - "deepsearch": Tree-of-Thought search producing a DOCX report.
  */
 export type QueryMode =
   | 'naive'
