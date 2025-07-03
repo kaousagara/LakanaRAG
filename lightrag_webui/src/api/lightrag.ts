@@ -683,3 +683,53 @@ export const deleteAccount = async (username: string): Promise<DocActionResponse
   const response = await axiosInstance.delete(`/accounts/${encodeURIComponent(username)}`)
   return response.data
 }
+
+export const createEntity = async (
+  entityName: string,
+  entityData: Record<string, any>
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.post('/graph/entity/create', {
+    entity_name: entityName,
+    entity_data: entityData
+  })
+  return response.data
+}
+
+export const createRelation = async (
+  source: string,
+  target: string,
+  relationData: Record<string, any>
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.post('/graph/relation/create', {
+    source_entity: source,
+    target_entity: target,
+    relation_data: relationData
+  })
+  return response.data
+}
+
+export const mergeEntities = async (
+  sources: string[],
+  target: string
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.post('/graph/entities/merge', {
+    source_entities: sources,
+    target_entity: target
+  })
+  return response.data
+}
+
+export const deleteEntity = async (entityName: string): Promise<DocActionResponse> => {
+  const response = await axiosInstance.delete(`/graph/entity/${encodeURIComponent(entityName)}`)
+  return response.data
+}
+
+export const deleteRelation = async (
+  source: string,
+  target: string
+): Promise<DocActionResponse> => {
+  const response = await axiosInstance.delete(
+    `/graph/relation?source_entity=${encodeURIComponent(source)}&target_entity=${encodeURIComponent(target)}`
+  )
+  return response.data
+}

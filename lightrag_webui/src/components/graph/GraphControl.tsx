@@ -43,6 +43,7 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
   const selectedEdge = useGraphStore.use.selectedEdge()
   const focusedEdge = useGraphStore.use.focusedEdge()
   const sigmaGraph = useGraphStore.use.sigmaGraph()
+  const addMultiSelectedNode = useGraphStore.use.addMultiSelectedNode()
 
   /**
    * When component mount or maxIterations changes
@@ -113,8 +114,12 @@ const GraphControl = ({ disableHoverEffect }: { disableHoverEffect?: boolean }) 
       clickNode: (event: NodeEvent) => {
         const graph = sigma.getGraph()
         if (graph.hasNode(event.node)) {
-          setSelectedNode(event.node)
-          setSelectedEdge(null)
+          if ((event.event.original as MouseEvent).shiftKey) {
+            addMultiSelectedNode(event.node)
+          } else {
+            setSelectedNode(event.node)
+            setSelectedEdge(null)
+          }
         }
       },
       clickStage: () => clearSelection()
