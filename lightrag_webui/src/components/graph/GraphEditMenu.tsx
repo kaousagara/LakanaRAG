@@ -71,11 +71,17 @@ const GraphEditMenu = () => {
   }
 
   return (
-    <div className="bg-background/60 absolute bottom-2 right-2 flex flex-col gap-2 rounded-xl border-2 p-2 text-xs backdrop-blur-lg">
+    <div className="bg-background/60 absolute top-24 left-2 flex flex-col gap-2 rounded-xl border-2 p-2 text-xs backdrop-blur-lg">
       {multiSelectedNodes.length > 1 && (
-        <Button size="sm" onClick={handleMerge}>
-          Merge Nodes ({multiSelectedNodes.length})
-        </Button>
+        <div className="flex flex-col gap-1">
+          <div>Selected nodes:</div>
+          <ul className="list-disc list-inside">
+            {multiSelectedNodes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+          <Button size="sm" onClick={handleMerge}>Merge Nodes</Button>
+        </div>
       )}
       {selectedNode && (
         <Button size="sm" variant="destructive" onClick={handleDeleteNode}>

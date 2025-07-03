@@ -21,6 +21,7 @@ import SettingsDisplay from '@/components/graph/SettingsDisplay'
 import Legend from '@/components/graph/Legend'
 import LegendButton from '@/components/graph/LegendButton'
 import GraphEditMenu from '@/components/graph/GraphEditMenu'
+import { useAuthStore } from '@/stores/state'
 
 import { useSettingsStore } from '@/stores/settings'
 import { useGraphStore } from '@/stores/graph'
@@ -115,6 +116,8 @@ const GraphViewer = () => {
   const focusedNode = useGraphStore.use.focusedNode()
   const moveToSelectedNode = useGraphStore.use.moveToSelectedNode()
   const isFetching = useGraphStore.use.isFetching()
+
+  const isAdmin = useAuthStore.use.isAdmin()
 
   const showPropertyPanel = useSettingsStore.use.showPropertyPanel()
   const showNodeSearchBar = useSettingsStore.use.showNodeSearchBar()
@@ -216,7 +219,7 @@ const GraphViewer = () => {
           </div>
         )}
 
-        <GraphEditMenu />
+        {isAdmin && <GraphEditMenu />}
 
         {/* <div className="absolute bottom-2 right-2 flex flex-col rounded-xl border-2">
           <MiniMap width="100px" height="100px" />
