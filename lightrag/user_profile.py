@@ -188,7 +188,7 @@ def auto_tag_entities(user_id: str, entities: List[str]) -> None:
 
 
 def analyze_behavior(user_id: str) -> Dict[str, Any]:
-    """Return simple behavioural metrics extracted from the profile."""
+    """Return behavioural metrics extracted from the profile."""
     profile = load_user_profile(user_id)
     word_counts: Dict[str, int] = {}
     for conv in profile.get("conversations", {}).values():
@@ -197,14 +197,31 @@ def analyze_behavior(user_id: str) -> Dict[str, Any]:
                 for word in msg.get("content", "").split():
                     word_counts[word] = word_counts.get(word, 0) + 1
     top_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-    errors = sum(
-        1 for fb in profile.get("feedback", []) if fb.get("rating") == "negative"
-    )
+    feedback = profile.get("feedback", [])
+    errors = sum(1 for fb in feedback if fb.get("rating") == "negative")
+    positives = sum(1 for fb in feedback if fb.get("rating") == "positive")
+    query_usage = profile.get("query_usage", {})
+    total_queries = sum(query_usage.values())
+    if total_queries:
+        avg_len = sum(len(q.split()) * c for q, c in query_usage.items()) / total_queries
+    else:
+        avg_len = 0.0
     top_queries = sorted(
         profile.get("query_usage", {}).items(), key=lambda x: x[1], reverse=True
     )[:5]
     return {
         "top_words": top_words,
         "negative_feedback": errors,
+        "positive_feedback": positives,
+        "total_queries": total_queries,
+        "average_query_length": avg_len,
         "top_queries": top_queries,
     }
+
+
+def reset_user_profile(user_id: str) -> None:
+    """Delete all data for a user profile."""
+    os.makedirs(PROFILE_DIR, exist_ok=True)
+    profile_path = os.path.join(PROFILE_DIR, f"{user_id}.json")
+    if os.path.exists(profile_path):
+        os.remove(profile_path)

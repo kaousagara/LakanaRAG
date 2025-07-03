@@ -105,16 +105,7 @@ class NetworkXStorage(BaseGraphStorage):
 
     async def get_node(self, node_id: str) -> dict[str, str] | None:
         graph = await self._get_graph()
-        all_node_ids = list(graph.nodes.keys())
-
-        closest_matches = difflib.get_close_matches(
-            node_id, all_node_ids, n=1, cutoff=0.85
-        )
-        if not closest_matches:
-            return None
-
-        best_match_id = closest_matches[0]
-        return graph.nodes.get(best_match_id)
+        return graph.nodes.get(node_id)
 
     async def node_degree(self, node_id: str) -> int:
         graph = await self._get_graph()
