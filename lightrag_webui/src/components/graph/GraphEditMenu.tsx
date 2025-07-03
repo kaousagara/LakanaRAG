@@ -2,6 +2,12 @@ import { useState } from 'react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { createEntity, createRelation, mergeEntities, deleteEntity, deleteRelation } from '@/api/lightrag'
+
+const DEFAULT_MERGE_STRATEGY = {
+  description: 'concatenate',
+  entity_type: 'keep_first',
+  source_id: 'join_unique'
+}
 import { useGraphStore } from '@/stores/graph'
 
 const GraphEditMenu = () => {
@@ -43,7 +49,7 @@ const GraphEditMenu = () => {
     if (multiSelectedNodes.length < 2) return
     const [target, ...sources] = multiSelectedNodes
     try {
-      await mergeEntities(sources, target)
+      await mergeEntities(sources, target, DEFAULT_MERGE_STRATEGY)
     } catch (e) {
       console.error(e)
     }

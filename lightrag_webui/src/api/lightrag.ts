@@ -710,11 +710,13 @@ export const createRelation = async (
 
 export const mergeEntities = async (
   sources: string[],
-  target: string
+  target: string,
+  mergeStrategy?: Record<string, string>
 ): Promise<DocActionResponse> => {
   const response = await axiosInstance.post('/graph/entities/merge', {
     source_entities: sources,
-    target_entity: target
+    target_entity: target,
+    merge_strategy: mergeStrategy
   })
   return response.data
 }
