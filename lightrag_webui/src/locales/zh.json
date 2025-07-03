@@ -375,6 +375,11 @@
     "title": "行为分析",
     "topWords": "高频词",
     "negativeFeedback": "负面反馈",
+    "positiveFeedback": "正面反馈",
+    "totalQueries": "总查询数",
+    "averageQueryLength": "平均查询长度",
+    "reset": "重置个人资料",
+    "resetting": "正在重置...",
     "topQueries": "高频查询",
     "loading": "正在加载分析..."
   },

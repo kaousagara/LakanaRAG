@@ -375,6 +375,11 @@
     "title": "Behavior Analysis",
     "topWords": "Top Words",
     "negativeFeedback": "Negative Feedback",
+    "positiveFeedback": "Positive Feedback",
+    "totalQueries": "Total Queries",
+    "averageQueryLength": "Average Query Length",
+    "reset": "Reset Profile",
+    "resetting": "Resetting...",
     "topQueries": "Top Queries",
     "loading": "Loading analysis..."
   },

@@ -375,6 +375,11 @@
     "title": "Analyse de comportement",
     "topWords": "Mots les plus utilisés",
     "negativeFeedback": "Avis négatifs",
+    "positiveFeedback": "Avis positifs",
+    "totalQueries": "Nombre total de requêtes",
+    "averageQueryLength": "Longueur moyenne des requêtes",
+    "reset": "Réinitialiser le profil",
+    "resetting": "Réinitialisation...",
     "topQueries": "Requêtes fréquentes",
     "loading": "Chargement de l'analyse..."
   },

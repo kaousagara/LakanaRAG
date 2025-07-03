@@ -373,6 +373,11 @@
     "title": "行為分析",
     "topWords": "高頻詞",
     "negativeFeedback": "負面反饋",
+    "positiveFeedback": "正面反饋",
+    "totalQueries": "總查詢數",
+    "averageQueryLength": "平均查詢長度",
+    "reset": "重設個人資料",
+    "resetting": "正在重設...",
     "topQueries": "高頻查詢",
     "loading": "正在載入分析..."
   },

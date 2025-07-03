@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getBehaviorAnalysis, BehaviorAnalysis } from '@/api/lightrag'
+import { getBehaviorAnalysis, resetUserProfile, BehaviorAnalysis } from '@/api/lightrag'
 import { useAuthStore } from '@/stores/state'
 import { useTabVisibility } from '@/contexts/useTabVisibility'
 
@@ -12,6 +12,7 @@ export default function BehaviorAnalysis() {
 
   const [analysis, setAnalysis] = useState<BehaviorAnalysis | null>(null)
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!username || !isVisible) return
@@ -21,6 +22,19 @@ export default function BehaviorAnalysis() {
       .catch((e) => console.error(e))
       .finally(() => setLoading(false))
   }, [username, isVisible])
+
+  const handleReset = async () => {
+    if (!username) return
+    setSaving(true)
+    try {
+      await resetUserProfile(username)
+      setAnalysis(null)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (!isVisible) return <div className="hidden" />
 
@@ -49,6 +63,22 @@ export default function BehaviorAnalysis() {
           <div>
             {t('behaviorAnalysis.negativeFeedback')}: {analysis.negative_feedback}
           </div>
+          <div>
+            {t('behaviorAnalysis.positiveFeedback')}: {analysis.positive_feedback}
+          </div>
+          <div>
+            {t('behaviorAnalysis.totalQueries')}: {analysis.total_queries}
+          </div>
+          <div>
+            {t('behaviorAnalysis.averageQueryLength')}: {analysis.average_query_length.toFixed(2)}
+          </div>
+          <button
+            className="px-3 py-1 bg-red-500 text-white rounded"
+            onClick={handleReset}
+            disabled={saving}
+          >
+            {saving ? t('behaviorAnalysis.resetting') : t('behaviorAnalysis.reset')}
+          </button>
         </div>
       )}
     </div>
