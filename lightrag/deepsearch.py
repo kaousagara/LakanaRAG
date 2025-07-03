@@ -181,7 +181,7 @@ def _create_docx(content: str, working_dir: str) -> str:
 
 def _format_report(query: str, qa_pairs: List[Tuple[str, str]]) -> str:
     text_lines = [f"# Rapport d'analyse approfondie : {query}", ""]
-    text_lines.append("## Synthèse complète des investigations", "")
+    text_lines.extend(["## Synthèse complète des investigations", ""])
     
     for idx, (q, a) in enumerate(qa_pairs, 1):
         text_lines.append(f"### Question d'analyse {idx} : {q}")
