@@ -10,6 +10,7 @@
     "documents": "文档",
     "knowledgeGraph": "知识图谱",
     "retrieval": "检索",
+    "analysis": "分析",
     "api": "API",
     "accounts": "账户",
     "projectRepository": "项目仓库",
@@ -369,6 +370,13 @@
   },
   "apiSite": {
     "loading": "正在加载 API 文档..."
+  },
+  "behaviorAnalysis": {
+    "title": "行为分析",
+    "topWords": "高频词",
+    "negativeFeedback": "负面反馈",
+    "topQueries": "高频查询",
+    "loading": "正在加载分析..."
   },
   "apiKeyAlert": {
     "title": "需要 API Key",

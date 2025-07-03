@@ -10,6 +10,7 @@
     "documents": "Documents",
     "knowledgeGraph": "Graphe de connaissances",
     "retrieval": "Récupération",
+    "analysis": "Analyse",
     "api": "API",
     "accounts": "Comptes",
     "projectRepository": "Référentiel du projet",
@@ -369,6 +370,13 @@
   },
   "apiSite": {
     "loading": "Chargement de la documentation de l'API..."
+  },
+  "behaviorAnalysis": {
+    "title": "Analyse de comportement",
+    "topWords": "Mots les plus utilisés",
+    "negativeFeedback": "Avis négatifs",
+    "topQueries": "Requêtes fréquentes",
+    "loading": "Chargement de l'analyse..."
   },
   "apiKeyAlert": {
     "title": "Clé API requise",

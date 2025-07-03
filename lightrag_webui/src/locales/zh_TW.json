@@ -10,6 +10,7 @@
     "documents": "文件",
     "knowledgeGraph": "知識圖譜",
     "retrieval": "檢索",
+    "analysis": "分析",
     "api": "API",
     "accounts": "帳戶",
     "projectRepository": "專案庫",
@@ -367,6 +368,13 @@
   },
   "apiSite": {
     "loading": "正在載入 API 文件..."
+  },
+  "behaviorAnalysis": {
+    "title": "行為分析",
+    "topWords": "高頻詞",
+    "negativeFeedback": "負面反饋",
+    "topQueries": "高頻查詢",
+    "loading": "正在載入分析..."
   },
   "apiKeyAlert": {
     "title": "需要 API key",

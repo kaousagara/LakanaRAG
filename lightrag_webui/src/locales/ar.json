@@ -10,6 +10,7 @@
     "documents": "المستندات",
     "knowledgeGraph": "شبكة المعرفة",
     "retrieval": "الاسترجاع",
+    "analysis": "التحليل",
     "api": "واجهة برمجة التطبيقات",
     "accounts": "الحسابات",
     "projectRepository": "مستودع المشروع",
@@ -367,6 +368,13 @@
   },
   "apiSite": {
     "loading": "جارٍ تحميل وثائق واجهة برمجة التطبيقات..."
+  },
+  "behaviorAnalysis": {
+    "title": "تحليل السلوك",
+    "topWords": "أكثر الكلمات استخدامًا",
+    "negativeFeedback": "الملاحظات السلبية",
+    "topQueries": "أكثر الاستعلامات",
+    "loading": "جارٍ تحميل التحليل..."
   },
   "apiKeyAlert": {
     "title": "مفتاح واجهة برمجة التطبيقات مطلوب",

@@ -733,3 +733,18 @@ export const deleteRelation = async (
   )
   return response.data
 }
+
+export type BehaviorAnalysis = {
+  top_words: [string, number][]
+  negative_feedback: number
+  top_queries: [string, number][]
+}
+
+export const getBehaviorAnalysis = async (
+  username: string
+): Promise<BehaviorAnalysis> => {
+  const response = await axiosInstance.get(
+    `/profile/${encodeURIComponent(username)}/analysis`
+  )
+  return response.data
+}

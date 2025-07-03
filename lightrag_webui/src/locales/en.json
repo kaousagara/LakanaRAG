@@ -10,6 +10,7 @@
     "documents": "Documents",
     "knowledgeGraph": "Knowledge Graph",
     "retrieval": "Retrieval",
+    "analysis": "Analysis",
     "api": "API",
     "accounts": "Accounts",
     "projectRepository": "Project Repository",
@@ -369,6 +370,13 @@
   },
   "apiSite": {
     "loading": "Loading API Documentation..."
+  },
+  "behaviorAnalysis": {
+    "title": "Behavior Analysis",
+    "topWords": "Top Words",
+    "negativeFeedback": "Negative Feedback",
+    "topQueries": "Top Queries",
+    "loading": "Loading analysis..."
   },
   "apiKeyAlert": {
     "title": "API Key is required",
