@@ -438,16 +438,25 @@ async def _merge_nodes_then_upsert(
     llm_response_cache: BaseKVStorage | None = None,
 ):
     """Get existing nodes from knowledge graph use name,if exists, merge data, else create, then upsert."""
+    #print(f"Les noeuds données au systeme {entity_name}")
     # Choose the most representative entity name among nodes_data and existing data
     name_candidates = [dp.get("entity_name") for dp in nodes_data if dp.get("entity_name")]
-    already_node = await knowledge_graph_inst.get_node(entity_name)
-    if already_node and already_node.get("entity_id"):
-        name_candidates.append(already_node.get("entity_id"))
+    #print(f"Les noeuds candidats {name_candidates}")
+    # already_node = await knowledge_graph_inst.get_node(entity_name)
+    # print(f"Les noeuds trouvés dans la base de données {already_node}")
+    # if already_node and already_node.get("entity_id"):
+    #     name_candidates.append(already_node.get("entity_id"))
+    #     print(f"Nouveaux noeuds candidats {name_candidates}")
 
     if name_candidates:
         entity_name = standardize_entity_name(Counter(name_candidates).most_common(1)[0][0])
+        # print(f"Les noeuds apres standardize avec name_canditate {entity_name}")
     else:
         entity_name = standardize_entity_name(entity_name)
+        # print(f"Les noeuds apres standardize sans name_canditate {entity_name}")
+
+    already_node = await knowledge_graph_inst.get_node(entity_name)
+    # print(f"Les noeuds trouvés dans la base de données {already_node}")
 
     already_entity_types = []
     already_source_ids = []
