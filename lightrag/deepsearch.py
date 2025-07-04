@@ -118,7 +118,7 @@ async def _generate_followups(question: str, answer: str, rag) -> list[str]:
     )
     follow = await rag.aquery(
         prompt,
-        QueryParam(mode="naive", response_type="JSON", stream=False),
+        QueryParam(mode="mix", response_type="JSON", stream=False),
         system_prompt="Spécialiste en approfondissement : propose des questions utiles et ciblées."
     )
     thoughts = await _parse_json(follow)
@@ -135,7 +135,7 @@ async def _generate_title(query: str, rag) -> str:
     )
     response = await rag.aquery(
         prompt,
-        QueryParam(mode="naive", response_type="Text", stream=False),
+        QueryParam(mode="mix", response_type="Text", stream=False),
         system_prompt="Assistant analyste : génère un titre résumé du sujet traité."
     )
     return response.strip().rstrip(".")
@@ -143,7 +143,7 @@ async def _generate_title(query: str, rag) -> str:
 
 async def _answer_question(question: str, rag, param: QueryParam) -> str:
     sub_param = QueryParam(**asdict(param))
-    sub_param.mode = "hybrid"
+    sub_param.mode = "mix"
     sub_param.stream = False
 
     full_prompt = (
