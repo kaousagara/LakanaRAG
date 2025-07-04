@@ -63,7 +63,7 @@ async def _generate_subqueries(query: str, rag) -> list[str]:
     )
     plan_text = await rag.aquery(
         plan_prompt,
-        QueryParam(mode="naive", response_type="JSON", stream=False),
+        QueryParam(mode="mix", response_type="JSON", stream=False),
         system_prompt=(
             "Expert en analyse thématique : décompose les sujets complexes en sous-questions pertinentes "
             "qui permettent des développements approfondis."
@@ -84,7 +84,7 @@ async def _generate_followups(question: str, answer: str, rag) -> list[str]:
     )
     follow = await rag.aquery(
         prompt,
-        QueryParam(mode="naive", response_type="JSON", stream=False),
+        QueryParam(mode="mix", response_type="JSON", stream=False),
         system_prompt=(
             "Spécialiste en approfondissement thématique : crée des questions de suivi "
             "qui permettent d'étendre l'analyse de manière cohérente et détaillée."
@@ -110,7 +110,7 @@ async def _evaluate_thought(thought: str, context: str, rag) -> float:
     )
     response = await rag.aquery(
         prompt,
-        QueryParam(mode="naive", response_type="Value", stream=False),
+        QueryParam(mode="mix", response_type="Value", stream=False),
         system_prompt=(
             "Évaluateur expert : analyse la qualité des questions de recherche. "
             "Fournis uniquement un score entre 0 et 1 sans aucun commentaire."
@@ -135,7 +135,7 @@ async def _select_thoughts(thoughts: List[str], context: str, rag, top_k: int) -
 
 async def _answer_question(question: str, rag, param: QueryParam) -> str:
     sub_param = QueryParam(**asdict(param))
-    sub_param.mode = "hybrid"
+    sub_param.mode = "mix"
     sub_param.stream = False
     
     # Prompt pour réponse complète et structurée
