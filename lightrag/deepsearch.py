@@ -158,8 +158,13 @@ async def _answer_question(question: str, rag, param: QueryParam) -> str:
     ans = await rag.aquery(
         full_prompt,
         sub_param,
-        system_prompt="Expert analyste : donne des réponses riches, logiques et approfondies."
+        system_prompt="Expert analyste : donne des réponses riches, logiques et approfondies.",
     )
+    if isinstance(ans, str) and rag.tokenizer is not None:
+        tokens = rag.tokenizer.encode(ans)
+        max_tokens = getattr(rag, "llm_model_max_token_size", 0) or 0
+        if max_tokens > 0 and len(tokens) > max_tokens:
+            ans = rag.tokenizer.decode(tokens[:max_tokens])
     return ans if isinstance(ans, str) else str(ans)
 
 
