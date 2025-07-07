@@ -7,8 +7,18 @@ from typing import List, Tuple, Deque
 from collections import deque
 from dataclasses import asdict
 from docx import Document
+from pathlib import Path
+import configparser
 
 from .base import QueryParam
+
+config = configparser.ConfigParser()
+config.read("config.ini")
+
+REPORTS_DIR = Path(
+    os.getenv("REPORTS_DIR")
+    or config.get("paths", "reports_dir", fallback="/home/lakana/Documents/Myfiles/Data/reports")
+).resolve()
 
 
 class ToTNode:
@@ -188,7 +198,7 @@ def _format_report(title: str, qa_pairs: List[Tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
-def _create_docx(content: str, working_dir: str) -> str:
+def _create_docx(content: str) -> str:
     doc = Document()
     for line in content.split("\n"):
         if line.startswith("# "):
@@ -200,11 +210,11 @@ def _create_docx(content: str, working_dir: str) -> str:
         else:
             doc.add_paragraph(line)
 
-    report_dir = os.path.join(working_dir, "reports")
+    report_dir = REPORTS_DIR
     os.makedirs(report_dir, exist_ok=True)
-    file_path = os.path.join(report_dir, f"deepsearch_{int(time.time())}.docx")
-    doc.save(file_path)
-    return file_path
+    file_path = report_dir / f"deepsearch_{int(time.time())}.docx"
+    doc.save(str(file_path))
+    return str(file_path)
 
 
 async def deepsearch_query(query: str, rag, param: QueryParam) -> str:
@@ -252,4 +262,7 @@ async def deepsearch_query(query: str, rag, param: QueryParam) -> str:
 
     title = await _generate_title(query, rag)
     report_text = _format_report(title, qa_pairs)
-    return _create_docx(report_text, rag.working_dir)
+    file_path = _create_docx(report_text)
+    host = os.getenv("HOST", "localhost")
+    port = os.getenv("PORT", "8000")
+    return f"http://{host}:{port}/download/{Path(file_path).name}"

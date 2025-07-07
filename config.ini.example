@@ -28,3 +28,6 @@ max_connections = 12
 
 # MULTI_HOP_MIN_STRENGTH=0.5
 # LATENT_RELATION_MIN_STRENGTH=0.5
+
+[paths]
+reports_dir = /home/lakana/Documents/Myfiles/Data/reports

@@ -9,6 +9,7 @@ import signal
 import pipmaster as pm
 from pathlib import Path
 from fastapi.responses import FileResponse
+import configparser
 from lightrag.api.utils_api import display_splash_screen, check_env_file
 from lightrag.api.config import global_args
 from lightrag.utils import get_env_value
@@ -19,8 +20,15 @@ from lightrag.constants import (
     DEFAULT_TIMEOUT,
 )
 
+# Load config file for optional settings
+config = configparser.ConfigParser()
+config.read("config.ini")
+
 # Directory containing generated reports for download
-REPORTS_DIR = Path("/home/lakana/Documents/Myfiles/Data/reports").resolve()
+REPORTS_DIR = Path(
+    os.getenv("REPORTS_DIR")
+    or config.get("paths", "reports_dir", fallback="/home/lakana/Documents/Myfiles/Data/reports")
+).resolve()
 
 
 def check_and_install_dependencies():

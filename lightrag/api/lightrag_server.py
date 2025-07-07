@@ -68,12 +68,15 @@ load_dotenv(dotenv_path=".env", override=False)
 webui_title = os.getenv("WEBUI_TITLE")
 webui_description = os.getenv("WEBUI_DESCRIPTION")
 
-# Directory containing generated reports
-REPORTS_DIR = Path("/home/lakana/Documents/Myfiles/Data/reports").resolve()
-
 # Initialize config parser
 config = configparser.ConfigParser()
 config.read("config.ini")
+
+# Directory containing generated reports
+REPORTS_DIR = Path(
+    os.getenv("REPORTS_DIR")
+    or config.get("paths", "reports_dir", fallback="/home/lakana/Documents/Myfiles/Data/reports")
+).resolve()
 
 # Global authentication configuration
 auth_configured = bool(auth_handler.accounts)
