@@ -152,13 +152,18 @@ async def _answer_question(question: str, rag, param: QueryParam) -> str:
         "- Fournis une réponse complète, détaillée et bien structurée\n"
         "- Développe chaque point de manière approfondie\n"
         "- Utilise des paragraphes organisés avec une progression logique\n"
+        "- Appuie-toi uniquement sur le contenu fourni par la base de connaissances\n"
+        "- Indique clairement lorsque l'information n'est pas disponible\n"
         "- Évite les réponses concises ou superficielles"
     )
 
     ans = await rag.aquery(
         full_prompt,
         sub_param,
-        system_prompt="Expert analyste : donne des réponses riches, logiques et approfondies.",
+        system_prompt=(
+            "Expert analyste : utilise uniquement les informations issues des documents et "
+            "du graphe fournis. N'invente aucune donnée extérieure."
+        ),
     )
     if isinstance(ans, str) and rag.tokenizer is not None:
         tokens = rag.tokenizer.encode(ans)
