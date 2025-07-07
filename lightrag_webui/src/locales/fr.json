@@ -10,6 +10,7 @@
     "documents": "Documents",
     "knowledgeGraph": "Graphe de connaissances",
     "retrieval": "Récupération",
+    "analysis": "Analyse",
     "api": "API",
     "accounts": "Comptes",
     "projectRepository": "Référentiel du projet",
@@ -144,7 +145,7 @@
   "graphPanel": {
     "dataIsTruncated": "Les données du graphe sont tronquées au nombre maximum de nœuds",
     "statusDialog": {
-      "title": "Paramètres du Serveur LightRAG",
+      "title": "Paramètres du Serveur LAKANARAG",
       "description": "Afficher l'état actuel du système et les informations de connexion"
     },
     "legend": "Légende",
@@ -317,7 +318,7 @@
       "parametersTitle": "Paramètres",
       "parametersDescription": "Configurez vos paramètres de requête",
       "queryMode": "Mode de requête",
-      "queryModeTooltip": "Sélectionnez la stratégie de récupération :\n• Naïf : Recherche de base sans techniques avancées\n• Local : Récupération d'informations dépendante du contexte\n• Global : Utilise une base de connaissances globale\n• Hybride : Combine récupération locale et globale\n• Mixte : Intègre le graphe de connaissances avec la récupération vectorielle\n• Bypass : Transmet directement la requête au LLM sans récupération\n• Analyste : Utilise un comité d'analystes\n• Deepsearch : Recherche approfondie avec rapport PDF",
+      "queryModeTooltip": "Sélectionnez la stratégie de récupération :\n• Naïf : Recherche de base sans techniques avancées\n• Local : Récupération d'informations dépendante du contexte\n• Global : Utilise une base de connaissances globale\n• Hybride : Combine récupération locale et globale\n• Mixte : Intègre le graphe de connaissances avec la récupération vectorielle\n• Bypass : Transmet directement la requête au LLM sans récupération\n• Analyste : Utilise un comité d'analystes\n• Deepsearch : Recherche approfondie avec rapport DOCX",
       "queryModeOptions": {
         "naive": "Naïf",
         "local": "Local",
@@ -369,6 +370,18 @@
   },
   "apiSite": {
     "loading": "Chargement de la documentation de l'API..."
+  },
+  "behaviorAnalysis": {
+    "title": "Analyse de comportement",
+    "topWords": "Mots les plus utilisés",
+    "negativeFeedback": "Avis négatifs",
+    "positiveFeedback": "Avis positifs",
+    "totalQueries": "Nombre total de requêtes",
+    "averageQueryLength": "Longueur moyenne des requêtes",
+    "reset": "Réinitialiser le profil",
+    "resetting": "Réinitialisation...",
+    "topQueries": "Requêtes fréquentes",
+    "loading": "Chargement de l'analyse..."
   },
   "apiKeyAlert": {
     "title": "Clé API requise",

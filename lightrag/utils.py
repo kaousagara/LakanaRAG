@@ -1683,20 +1683,19 @@ def standardize_entity_name(name: str) -> str:
 def canonicalize_entity_name(name: str) -> str:
     """Return a canonical form of an entity name.
 
-    The canonical form is lowercase ASCII without punctuation or spaces,
-    which helps detect duplicate entities with similar spellings.
+    Only accents and letter case are ignored so that two names are
+    considered the same if they differ solely by these aspects. Spaces and
+    punctuation are preserved to avoid merging unrelated nodes.
     """
     import unicodedata
 
-    # Normalize and strip accents
+    # Normalize and strip accents while preserving the original characters
     normalized = unicodedata.normalize("NFKD", name)
     without_accents = "".join(
         c for c in normalized if not unicodedata.combining(c)
     )
 
-    # Remove non-alphanumeric characters and lowercase
-    canonical = re.sub(r"[^A-Za-z0-9]", "", without_accents).lower()
-    return canonical
+    return without_accents.lower()
 
 
 def clean_text(text: str) -> str:

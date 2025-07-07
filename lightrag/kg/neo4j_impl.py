@@ -286,26 +286,16 @@ class Neo4JStorage(BaseGraphStorage):
             database=self._DATABASE, default_access_mode="READ"
         ) as session:
             try:
-                query = """MATCH (n:base) WITH n, apoc.text.jaroWinklerDistance(toLower(n.entity_id), toLower($entity_id)) AS similarity WHERE similarity > 0.85 RETURN n, similarity ORDER BY similarity DESC LIMIT 1"""
+                query = "MATCH (n:base {entity_id: $entity_id}) RETURN n"
                 result = await session.run(query, entity_id=node_id)
                 try:
-                    records = await result.fetch(
-                        2
-                    )  # Get 2 records for duplication check
-
-                    if len(records) > 1:
-                        logger.warning(
-                            f"Multiple nodes found with label '{node_id}'. Using first node."
-                        )
-                    if records:
-                        node = records[0]["n"]
+                    record = await result.single()
+                    if record:
+                        node = record["n"]
                         node_dict = dict(node)
-                        # Remove base label from labels list if it exists
                         if "labels" in node_dict:
                             node_dict["labels"] = [
-                                label
-                                for label in node_dict["labels"]
-                                if label != "base"
+                                label for label in node_dict["labels"] if label != "base"
                             ]
                         logger.debug(f"Neo4j query node {query} return: {node_dict}")
                         return node_dict

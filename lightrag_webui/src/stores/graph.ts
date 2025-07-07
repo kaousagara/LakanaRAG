@@ -81,6 +81,8 @@ interface GraphState {
   selectedEdge: string | null
   focusedEdge: string | null
 
+  multiSelectedNodes: string[]
+
   rawGraph: RawGraph | null
   sigmaGraph: DirectedGraph | null
   sigmaInstance: any | null
@@ -106,6 +108,9 @@ interface GraphState {
   setFocusedEdge: (edgeId: string | null) => void
   clearSelection: () => void
   reset: () => void
+
+  addMultiSelectedNode: (id: string) => void
+  clearMultiSelectedNodes: () => void
 
   setMoveToSelectedNode: (moveToSelectedNode: boolean) => void
   setGraphIsEmpty: (isEmpty: boolean) => void
@@ -147,6 +152,7 @@ const useGraphStoreBase = create<GraphState>()((set, get) => ({
   focusedNode: null,
   selectedEdge: null,
   focusedEdge: null,
+  multiSelectedNodes: [],
 
   moveToSelectedNode: false,
   isFetching: false,
@@ -181,7 +187,8 @@ const useGraphStoreBase = create<GraphState>()((set, get) => ({
       selectedNode: null,
       focusedNode: null,
       selectedEdge: null,
-      focusedEdge: null
+      focusedEdge: null,
+      multiSelectedNodes: []
     }),
   reset: () => {
     set({
@@ -230,6 +237,14 @@ const useGraphStoreBase = create<GraphState>()((set, get) => ({
 
   setSearchEngine: (engine: MiniSearch | null) => set({ searchEngine: engine }),
   resetSearchEngine: () => set({ searchEngine: null }),
+
+  addMultiSelectedNode: (id: string) =>
+    set((state) => ({
+      multiSelectedNodes: state.multiSelectedNodes.includes(id)
+        ? state.multiSelectedNodes.filter((n) => n !== id)
+        : [...state.multiSelectedNodes, id]
+    })),
+  clearMultiSelectedNodes: () => set({ multiSelectedNodes: [] }),
 
   // Methods to set global flags
   setGraphDataFetchAttempted: (attempted: boolean) => set({ graphDataFetchAttempted: attempted }),

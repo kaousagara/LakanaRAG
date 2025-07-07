@@ -10,6 +10,7 @@
     "documents": "文件",
     "knowledgeGraph": "知識圖譜",
     "retrieval": "檢索",
+    "analysis": "分析",
     "api": "API",
     "accounts": "帳戶",
     "projectRepository": "專案庫",
@@ -144,7 +145,7 @@
   "graphPanel": {
     "dataIsTruncated": "圖資料已截斷至最大回傳節點數",
     "statusDialog": {
-      "title": "LightRAG 伺服器設定",
+      "title": "LAKANARAG 伺服器設定",
       "description": "查看目前系統狀態和連線資訊"
     },
     "legend": "圖例",
@@ -315,7 +316,7 @@
       "parametersTitle": "參數",
       "parametersDescription": "設定查詢參數",
       "queryMode": "查詢模式",
-      "queryModeTooltip": "選擇檢索策略：\n• Naive：基礎搜尋，無進階技術\n• Local：上下文相關資訊檢索\n• Global：利用全域知識庫\n• Hybrid：結合本地和全域檢索\n• Mix：整合知識圖譜和向量檢索\n• Bypass：直接傳遞查詢到LLM，不進行檢索\n• 分析師模式：使用分析專家小組\n• Deepsearch：多步檢索並產生PDF報告",
+      "queryModeTooltip": "選擇檢索策略：\n• Naive：基礎搜尋，無進階技術\n• Local：上下文相關資訊檢索\n• Global：利用全域知識庫\n• Hybrid：結合本地和全域檢索\n• Mix：整合知識圖譜和向量檢索\n• Bypass：直接傳遞查詢到LLM，不進行檢索\n• 分析師模式：使用分析專家小組\n• Deepsearch：多步檢索並產生DOCX報告",
       "queryModeOptions": {
         "naive": "Naive",
         "local": "Local",
@@ -367,6 +368,18 @@
   },
   "apiSite": {
     "loading": "正在載入 API 文件..."
+  },
+  "behaviorAnalysis": {
+    "title": "行為分析",
+    "topWords": "高頻詞",
+    "negativeFeedback": "負面反饋",
+    "positiveFeedback": "正面反饋",
+    "totalQueries": "總查詢數",
+    "averageQueryLength": "平均查詢長度",
+    "reset": "重設個人資料",
+    "resetting": "正在重設...",
+    "topQueries": "高頻查詢",
+    "loading": "正在載入分析..."
   },
   "apiKeyAlert": {
     "title": "需要 API key",

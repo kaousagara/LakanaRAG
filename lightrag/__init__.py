@@ -12,6 +12,7 @@ from .user_profile import (
     record_branch_feedback,
     auto_tag_entities,
     analyze_behavior,
+    reset_user_profile,
     profile_to_prompt,
 )
 
@@ -30,6 +31,7 @@ __all__ = [
     "record_branch_feedback",
     "auto_tag_entities",
     "analyze_behavior",
+    "reset_user_profile",
     "profile_to_prompt",
 ]
 

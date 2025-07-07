@@ -10,6 +10,7 @@
     "documents": "Documents",
     "knowledgeGraph": "Knowledge Graph",
     "retrieval": "Retrieval",
+    "analysis": "Analysis",
     "api": "API",
     "accounts": "Accounts",
     "projectRepository": "Project Repository",
@@ -144,7 +145,7 @@
   "graphPanel": {
     "dataIsTruncated": "Graph data is truncated to Max Nodes",
     "statusDialog": {
-      "title": "LightRAG Server Settings",
+      "title": "LAKANARAG Server Settings",
       "description": "View current system status and connection information"
     },
     "legend": "Legend",
@@ -317,7 +318,7 @@
       "parametersTitle": "Parameters",
       "parametersDescription": "Configure your query parameters",
       "queryMode": "Query Mode",
-      "queryModeTooltip": "Select the retrieval strategy:\n• Naive: Basic search without advanced techniques\n• Local: Context-dependent information retrieval\n• Global: Utilizes global knowledge base\n• Hybrid: Combines local and global retrieval\n• Mix: Integrates knowledge graph with vector retrieval\n• Bypass: Passes query directly to LLM without retrieval\n• Analyst: Uses an analyst committee prompt\n• Deepsearch: Multi-step search with PDF report",
+      "queryModeTooltip": "Select the retrieval strategy:\n• Naive: Basic search without advanced techniques\n• Local: Context-dependent information retrieval\n• Global: Utilizes global knowledge base\n• Hybrid: Combines local and global retrieval\n• Mix: Integrates knowledge graph with vector retrieval\n• Bypass: Passes query directly to LLM without retrieval\n• Analyst: Uses an analyst committee prompt\n• Deepsearch: Multi-step search with DOCX report",
       "queryModeOptions": {
         "naive": "Naive",
         "local": "Local",
@@ -369,6 +370,18 @@
   },
   "apiSite": {
     "loading": "Loading API Documentation..."
+  },
+  "behaviorAnalysis": {
+    "title": "Behavior Analysis",
+    "topWords": "Top Words",
+    "negativeFeedback": "Negative Feedback",
+    "positiveFeedback": "Positive Feedback",
+    "totalQueries": "Total Queries",
+    "averageQueryLength": "Average Query Length",
+    "reset": "Reset Profile",
+    "resetting": "Resetting...",
+    "topQueries": "Top Queries",
+    "loading": "Loading analysis..."
   },
   "apiKeyAlert": {
     "title": "API Key is required",

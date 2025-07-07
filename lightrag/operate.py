@@ -438,16 +438,30 @@ async def _merge_nodes_then_upsert(
     llm_response_cache: BaseKVStorage | None = None,
 ):
     """Get existing nodes from knowledge graph use name,if exists, merge data, else create, then upsert."""
+    #print(f"Les noeuds données au systeme {entity_name}")
     # Choose the most representative entity name among nodes_data and existing data
     name_candidates = [dp.get("entity_name") for dp in nodes_data if dp.get("entity_name")]
-    already_node = await knowledge_graph_inst.get_node(entity_name)
-    if already_node and already_node.get("entity_id"):
-        name_candidates.append(already_node.get("entity_id"))
 
-    if name_candidates:
-        entity_name = standardize_entity_name(Counter(name_candidates).most_common(1)[0][0])
+    # Standardize all candidate names and check if any already exist in the graph
+    std_candidates = [standardize_entity_name(n) for n in name_candidates]
+    existing_node = None
+    chosen_name = None
+    for cand in {standardize_entity_name(entity_name)} | set(std_candidates):
+        node = await knowledge_graph_inst.get_node(cand)
+        if node:
+            existing_node = node
+            chosen_name = cand
+            break
+
+    if chosen_name:
+        entity_name = chosen_name
+    elif std_candidates:
+        # Pick the most common standardized name when no existing node matches
+        entity_name = Counter(std_candidates).most_common(1)[0][0]
     else:
         entity_name = standardize_entity_name(entity_name)
+
+    already_node = existing_node or await knowledge_graph_inst.get_node(entity_name)
 
     already_entity_types = []
     already_source_ids = []

@@ -17,6 +17,7 @@ from lightrag.user_profile import (
     revert_user_profile,
     load_user_profile,
     update_user_profile,
+    reset_user_profile,
     get_conversation_history,
 )
 from ..utils_api import get_combined_auth_dependency
@@ -283,6 +284,16 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
         """Update or create a user profile."""
         try:
             return update_user_profile(user_id, request.profile)
+        except Exception as e:
+            trace_exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.delete("/profile/{user_id}", dependencies=[Depends(combined_auth)])
+    async def delete_profile(user_id: str):
+        """Reset the user profile by deleting stored data."""
+        try:
+            reset_user_profile(user_id)
+            return {"status": "success"}
         except Exception as e:
             trace_exception(e)
             raise HTTPException(status_code=500, detail=str(e))

@@ -16,6 +16,7 @@ import DocumentManager from '@/features/DocumentManager'
 import RetrievalTesting from '@/features/RetrievalTesting'
 import ApiSite from '@/features/ApiSite'
 import AccountManager from '@/features/AccountManager'
+import BehaviorAnalysis from '@/features/BehaviorAnalysis'
 
 import { Tabs, TabsContent } from '@/components/ui/Tabs'
 
@@ -216,6 +217,9 @@ function App() {
                 </TabsContent>
                 <TabsContent value="api" className="absolute top-0 right-0 bottom-0 left-0 overflow-hidden">
                   <ApiSite />
+                </TabsContent>
+                <TabsContent value="analysis" className="absolute top-0 right-0 bottom-0 left-0 overflow-auto">
+                  <BehaviorAnalysis />
                 </TabsContent>
                 <TabsContent value="accounts" className="absolute top-0 right-0 bottom-0 left-0 overflow-auto">
                   <AccountManager />
