@@ -10,7 +10,7 @@ import logging.config
 import uvicorn
 import pipmaster as pm
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from pathlib import Path
 import configparser
 from ascii_colors import ASCIIColors
@@ -67,6 +67,9 @@ load_dotenv(dotenv_path=".env", override=False)
 
 webui_title = os.getenv("WEBUI_TITLE")
 webui_description = os.getenv("WEBUI_DESCRIPTION")
+
+# Directory containing generated reports
+REPORTS_DIR = Path("/home/lakana/Documents/Myfiles/Data/reports").resolve()
 
 # Initialize config parser
 config = configparser.ConfigParser()
@@ -528,6 +531,20 @@ def create_app(args):
         except Exception as e:
             logger.error(f"Error getting health status: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/download/{filename}", dependencies=[Depends(combined_auth)])
+    async def download_file(filename: str):
+        """Download generated report files"""
+        safe_path = (REPORTS_DIR / filename).resolve()
+        if not safe_path.exists() or not safe_path.is_file():
+            raise HTTPException(status_code=404, detail="Fichier introuvable")
+        if not str(safe_path).startswith(str(REPORTS_DIR)):
+            raise HTTPException(status_code=403, detail="Accès non autorisé")
+        return FileResponse(
+            safe_path,
+            filename=safe_path.name,
+            media_type="application/octet-stream",
+        )
 
     # Custom StaticFiles class for smart caching
     class SmartStaticFiles(StaticFiles):  # Renamed from NoCacheStaticFiles
